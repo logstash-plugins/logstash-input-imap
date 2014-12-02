@@ -5,9 +5,9 @@ require "logstash/timestamp"
 require "stud/interval"
 require "socket" # for Socket.gethostname
 
-# Read mail from IMAP servers
+# Read mails from IMAP server
 #
-# Periodically scans INBOX and moves any read messages
+# Periodically scan an IMAP folder (`INBOX` by default) and move any read messages
 # to the trash.
 class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   config_name "imap"
