@@ -11,7 +11,6 @@ require "socket" # for Socket.gethostname
 # to the trash.
 class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   config_name "imap"
-  milestone 1
 
   default :codec, "plain"
 
