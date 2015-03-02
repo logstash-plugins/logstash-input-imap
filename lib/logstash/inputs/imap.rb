@@ -99,10 +99,14 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       # No multipart message, just use the body as the event text
       message = mail.body.decoded
     else
-      # Multipart message; use the first text/plain part we find
-      part = mail.parts.find { |p| p.content_type.match @content_type_re } || mail.parts.first
+      if mail.parts.map { |p| p.content_type.match Regexp.new("^multipart/alternative") }
+        part = mail.html_part || mail.text_part
+      else
+        part = mail.parts.map { |p| p.content_type.match @content_type_re } || mail.parts.map { |p| p.content_type.match Regexp.new("^text/plain") } || mail.parts.first
+      end    
+      
       message = part.decoded
-    end
+    end || mi 
 
     @codec.decode(message) do |event|
       # event = LogStash::Event.new("message" => message)
