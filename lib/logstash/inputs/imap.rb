@@ -154,6 +154,8 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   # the mail gem will set the correct encoding on header strings decoding
   # and we want to transcode it to utf8
   def transcode_to_utf8(s)
-    s.encode(Encoding::UTF_8, :invalid => :replace, :undef => :replace)
+    unless s.nil?
+      s.encode(Encoding::UTF_8, :invalid => :replace, :undef => :replace)
+    end
   end
 end # class LogStash::Inputs::IMAP
