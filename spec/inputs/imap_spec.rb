@@ -1,8 +1,37 @@
 # encoding: utf-8
-#
 require "logstash/devutils/rspec/spec_helper"
 require "logstash/inputs/imap"
 require "mail"
+require "net/imap"
+
+
+describe LogStash::Inputs::IMAP do
+
+  context "when interrupting the plugin" do
+    it_behaves_like "an interruptible input plugin" do
+      let(:config) do
+        { "type" => "imap",
+          "host" => "localhost",
+          "user" => "logstash",
+          "password" => "secret" }
+      end
+      let(:imap) { double("imap") }
+      let(:ids)  { double("ids") }
+      before(:each) do
+        allow(imap).to receive(:login)
+        allow(imap).to receive(:select)
+        allow(imap).to receive(:close)
+        allow(imap).to receive(:disconnect)
+        allow(imap).to receive(:store)
+        allow(ids).to receive(:each_slice).and_return([])
+
+        allow(imap).to receive(:search).with("NOT SEEN").and_return(ids)
+        allow(Net::IMAP).to receive(:new).and_return(imap)
+      end
+    end
+  end
+
+end
 
 describe LogStash::Inputs::IMAP do
   user = "logstash"

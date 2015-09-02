@@ -63,6 +63,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   end
 
   def run(queue)
+    @run_thread = Thread.current
     Stud.interval(@check_interval) do
       check_mail(queue)
     end
@@ -143,10 +144,10 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   end # def handle
 
   public
-  def teardown
+  def stop
+    Stud.stop!(@run_thread)
     $stdin.close
-    finished
-  end # def teardown
+  end
 
   private
 
