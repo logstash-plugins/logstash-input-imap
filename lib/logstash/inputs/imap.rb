@@ -32,7 +32,6 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   # content-type as the event message.
   config :content_type, :validate => :string, :default => "text/plain"
 
-  public
   def register
     require "net/imap" # in stdlib
     require "mail" # gem 'mail'
@@ -89,11 +88,11 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
     imap.close
     imap.disconnect
-  end # def run
+  end
 
   def parse_mail(mail)
     # Add a debug message so we can track what message might cause an error later
-    @logger.debug("Working with message_id", :message_id => mail.message_id)
+    @logger.debug? && @logger.debug("Working with message_id", :message_id => mail.message_id)
     # TODO(sissel): What should a multipart message look like as an event?
     # For now, just take the plain-text part and set it as the message.
     if mail.parts.count == 0
@@ -106,20 +105,13 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     end
 
     @codec.decode(message) do |event|
-      # event = LogStash::Event.new("message" => message)
-
       # Use the 'Date' field as the timestamp
       event.timestamp = LogStash::Timestamp.new(mail.date.to_time)
 
       # Add fields: Add message.header_fields { |h| h.name=> h.value }
       mail.header_fields.each do |header|
-        if @lowercase_headers
-          # 'header.name' can sometimes be a Mail::Multibyte::Chars, get it in
-          # String form
-          name = header.name.to_s.downcase
-        else
-          name = header.name.to_s
-        end
+        # 'header.name' can sometimes be a Mail::Multibyte::Chars, get it in String form
+        name = @lowercase_headers ? header.name.to_s.downcase : header.name.to_s
         # Call .decoded on the header in case it's in encoded-word form.
         # Details at:
         #   https://github.com/mikel/mail/blob/master/README.md#encodings
@@ -129,21 +121,24 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         # Assume we already processed the 'date' above.
         next if name == "Date"
 
-        case event[name]
+        case (field = event[name])
+        when String
           # promote string to array if a header appears multiple times
           # (like 'received')
-          when String; event[name] = [event[name], value]
-          when Array; event[name] << value
-          when nil; event[name] = value
+          event[name] = [field, value]
+        when Array
+          field << value
+          event[name] = field
+        when nil
+          event[name] = value
         end
-      end # mail.header_fields.each
+      end
 
       decorate(event)
       event
     end
-  end # def handle
+  end
 
-  public
   def stop
     Stud.stop!(@run_thread)
     $stdin.close
@@ -159,4 +154,4 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       s.encode(Encoding::UTF_8, :invalid => :replace, :undef => :replace)
     end
   end
-end # class LogStash::Inputs::IMAP
+end
