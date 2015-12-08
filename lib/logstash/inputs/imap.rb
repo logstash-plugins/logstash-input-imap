@@ -27,7 +27,8 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   config :lowercase_headers, :validate => :boolean, :default => true
   config :check_interval, :validate => :number, :default => 300
   config :delete, :validate => :boolean, :default => false
-
+  config :expunge_on_delete, :validate => :boolean, :default => false
+  
   # For multipart messages, use the first part that has this
   # content-type as the event message.
   config :content_type, :validate => :string, :default => "text/plain"
@@ -84,6 +85,9 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       end
 
       imap.store(id_set, '+FLAGS', @delete ? :Deleted : :Seen)
+      if @expunge_on_delete 
+        imap.expunge()
+      end
     end
 
     imap.close
