@@ -28,6 +28,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   config :check_interval, :validate => :number, :default => 300
   config :delete, :validate => :boolean, :default => false
   config :expunge_on_delete, :validate => :boolean, :default => false
+  config :strip_attachments, :validate => :boolean, :default => false
   
   # For multipart messages, use the first part that has this
   # content-type as the event message.
@@ -82,7 +83,11 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       items.each do |item|
         next unless item.attr.has_key?("RFC822")
         mail = Mail.read_from_string(item.attr["RFC822"])
-        queue << parse_mail(mail)
+        if @strip_attachments
+          queue << parse_mail(mail.without_attachments!)
+        else
+          queue << parse_mail(mail)
+        end
       end
 
       imap.store(id_set, '+FLAGS', @delete ? :Deleted : :Seen)
