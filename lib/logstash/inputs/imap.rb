@@ -27,7 +27,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   config :lowercase_headers, :validate => :boolean, :default => true
   config :check_interval, :validate => :number, :default => 300
   config :delete, :validate => :boolean, :default => false
-  config :expunge_on_delete, :validate => :boolean, :default => false
+  config :delete_expunge_on_process_msg, :validate => :boolean, :default => false
   config :strip_attachments, :validate => :boolean, :default => false
   
   # For multipart messages, use the first part that has this
@@ -91,9 +91,15 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       end
 
       imap.store(id_set, '+FLAGS', @delete ? :Deleted : :Seen)
-      if @expunge_on_delete 
+      
+      if @delete_expunge_on_process_msg 
+        # Force messages to be marked as "Deleted", the above may or may not be working as expected. "Seen" means nothing if you are going to
+        # delete a message after processing.
+        
+        imap.store(id_set, '+FLAGS', [:Deleted])
         imap.expunge()
       end
+    
     end
 
     imap.close
