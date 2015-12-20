@@ -27,6 +27,10 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   config :lowercase_headers, :validate => :boolean, :default => true
   config :check_interval, :validate => :number, :default => 300
   config :delete, :validate => :boolean, :default => false
+  
+  config :query, :validate => :string, :default => "NOT SEEN"
+  config :flag_when_read, :validate => :boolean, :default => true
+  config :include_body, :validate => :boolean, :default => true
 
   # For multipart messages, use the first part that has this
   # content-type as the event message.
@@ -73,7 +77,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     # EOFError, OpenSSL::SSL::SSLError
     imap = connect
     imap.select(@folder)
-    ids = imap.search("NOT SEEN")
+    ids = imap.search(@query)
 
     ids.each_slice(@fetch_count) do |id_set|
       items = imap.fetch(id_set, "RFC822")
@@ -83,7 +87,9 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         queue << parse_mail(mail)
       end
 
-      imap.store(id_set, '+FLAGS', @delete ? :Deleted : :Seen)
+      if @flag_when_read
+        imap.store(id_set, '+FLAGS', @delete ? :Deleted : :Seen)
+      end
     end
 
     imap.close
@@ -95,13 +101,22 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     @logger.debug? && @logger.debug("Working with message_id", :message_id => mail.message_id)
     # TODO(sissel): What should a multipart message look like as an event?
     # For now, just take the plain-text part and set it as the message.
-    if mail.parts.count == 0
-      # No multipart message, just use the body as the event text
-      message = mail.body.decoded
-    else
-      # Multipart message; use the first text/plain part we find
-      part = mail.parts.find { |p| p.content_type.match @content_type_re } || mail.parts.first
-      message = part.decoded
+    message = ""
+    if @include_body
+      if mail.parts.count == 0
+        # No multipart message, just use the body as the event text
+        message = mail.body.decoded
+      else
+        # Multipart message; use the first text/plain part we find
+        part = mail.parts.find { |p| p.content_type.match @content_type_re } || mail.parts.first
+        part = part.parts.first if part.mime_type == "multipart/alternative"
+        begin
+          message = part.decoded
+        rescue => e
+          require "pry"
+          binding.pry
+        end
+      end
     end
 
     @codec.decode(message) do |event|
