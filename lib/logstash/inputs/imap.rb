@@ -4,6 +4,7 @@ require "logstash/namespace"
 require "logstash/timestamp"
 require "stud/interval"
 require "socket" # for Socket.gethostname
+require "concurrent"
 
 # Read mails from IMAP server
 #
@@ -79,17 +80,32 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     imap.select(@folder)
     ids = imap.search(@query)
 
-    ids.each_slice(@fetch_count) do |id_set|
-      items = imap.fetch(id_set, "RFC822")
-      items.each do |item|
-        next unless item.attr.has_key?("RFC822")
-        mail = Mail.read_from_string(item.attr["RFC822"])
-        queue << parse_mail(mail)
-      end
+    pool = Concurrent::FixedThreadPool.new(3) 
 
-      if @flag_when_read
-        imap.store(id_set, '+FLAGS', @delete ? :Deleted : :Seen)
+    flags_queue = Queue.new
+
+    ids.each_slice(@fetch_count) do |id_set|
+      pool.post do 
+        items = imap.fetch(id_set, "RFC822")
+        items.each do |item|
+          next unless item.attr.has_key?("RFC822")
+          mail = Mail.read_from_string(item.attr["RFC822"])
+          event = parse_mail(mail)
+          queue << event
+        end
+
+        if @flag_when_read
+          flags_queue << id_set
+        end
       end
+    end
+
+    pool.shutdown
+    pool.wait_for_termination
+
+    while !flags_queue.empty?
+      id_set = flags_queue.pop
+      imap.store(id_set, '+FLAGS', @delete ? :Deleted : :Seen)
     end
 
     imap.close
@@ -102,6 +118,9 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     # TODO(sissel): What should a multipart message look like as an event?
     # For now, just take the plain-text part and set it as the message.
     message = ""
+    a = Time.now;
+
+
     if @include_body
       if mail.parts.count == 0
         # No multipart message, just use the body as the event text
@@ -110,12 +129,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         # Multipart message; use the first text/plain part we find
         part = mail.parts.find { |p| p.content_type.match @content_type_re } || mail.parts.first
         part = part.parts.first if part.mime_type == "multipart/alternative"
-        begin
-          message = part.decoded
-        rescue => e
-          require "pry"
-          binding.pry
-        end
+        message = part.decoded
       end
     end
 
@@ -124,7 +138,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       event.timestamp = LogStash::Timestamp.new(mail.date.to_time)
 
       # Add fields: Add message.header_fields { |h| h.name=> h.value }
-      mail.header_fields.each do |header|
+      fields = mail.header_fields.inject({}) do |m,header| 
         # 'header.name' can sometimes be a Mail::Multibyte::Chars, get it in String form
         name = @lowercase_headers ? header.name.to_s.downcase : header.name.to_s
         # Call .decoded on the header in case it's in encoded-word form.
@@ -133,20 +147,16 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         #   http://tools.ietf.org/html/rfc2047#section-2
         value = transcode_to_utf8(header.decoded.to_s)
 
-        # Assume we already processed the 'date' above.
-        next if name == "Date"
-
-        case (field = event[name])
-        when String
-          # promote string to array if a header appears multiple times
-          # (like 'received')
-          event[name] = [field, value]
-        when Array
-          field << value
-          event[name] = field
-        when nil
-          event[name] = value
+        if m.include?(name)
+          m[name] = [*m[name], value]
+        else
+          m[name] = value
         end
+        m
+      end
+
+      fields.each do |k,v|
+        event[k] = v
       end
 
       decorate(event)
@@ -165,8 +175,8 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   # the mail gem will set the correct encoding on header strings decoding
   # and we want to transcode it to utf8
   def transcode_to_utf8(s)
-    unless s.nil?
-      s.encode(Encoding::UTF_8, :invalid => :replace, :undef => :replace)
-    end
+    return if s.nil?
+    return s if s.encoding == Encoding::UTF_8
+    s.encode(Encoding::UTF_8, :invalid => :replace, :undef => :replace)
   end
 end
