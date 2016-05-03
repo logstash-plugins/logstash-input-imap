@@ -60,7 +60,7 @@ describe LogStash::Inputs::IMAP do
         input = LogStash::Inputs::IMAP.new config
         input.register
         event = input.parse_mail(subject)
-        insist { event["message"] } == msg_text
+        insist { event.get("message") } == msg_text
       end
     end
 
@@ -73,7 +73,7 @@ describe LogStash::Inputs::IMAP do
         input = LogStash::Inputs::IMAP.new config
         input.register
         event = input.parse_mail(subject)
-        insist { event["message"] } == msg_html
+        insist { event.get("message") } == msg_html
       end
     end
   end
@@ -87,7 +87,7 @@ describe LogStash::Inputs::IMAP do
       input = LogStash::Inputs::IMAP.new config
       input.register
       event = input.parse_mail(subject)
-      insist { event["subject"] } == "foo : bar"
+      insist { event.get("subject") } == "foo : bar"
     end
   end
 
@@ -102,7 +102,7 @@ describe LogStash::Inputs::IMAP do
       input = LogStash::Inputs::IMAP.new config
       input.register
       event = input.parse_mail(subject)
-      insist { event["received"] } == ["test1", "test2"]
+      insist { event.get("received") } == ["test1", "test2"]
     end
 
     it "should add more than 2 values as array in event" do
@@ -116,7 +116,7 @@ describe LogStash::Inputs::IMAP do
       input = LogStash::Inputs::IMAP.new config
       input.register
       event = input.parse_mail(subject)
-      insist { event["received"] } == ["test1", "test2", "test3"]
+      insist { event.get("received") } == ["test1", "test2", "test3"]
     end
   end
 
@@ -129,7 +129,7 @@ describe LogStash::Inputs::IMAP do
       input = LogStash::Inputs::IMAP.new config
       input.register
       event = input.parse_mail(subject)
-      insist { event["message"] } == msg_text
+      insist { event.get("message") } == msg_text
     end
   end
 end

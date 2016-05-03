@@ -121,16 +121,16 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         # Assume we already processed the 'date' above.
         next if name == "Date"
 
-        case (field = event[name])
+        case (field = event.get(name))
         when String
           # promote string to array if a header appears multiple times
           # (like 'received')
-          event[name] = [field, value]
+          event.set(name, [field, value])
         when Array
           field << value
-          event[name] = field
+          event.set(name, field)
         when nil
-          event[name] = value
+          event.set(name, value)
         end
       end
 
