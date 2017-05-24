@@ -90,15 +90,14 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       end
 
       imap.store(id_set, '+FLAGS', @delete ? :Deleted : :Seen)
-  
-    end
 
-  # Enable an 'expunge' IMAP command after the items.each loop
-    if @expunge 
-    # Force messages to be marked as "Deleted", the above may or may not be working as expected. "Seen" means nothing if you are going to
-    # delete a message after processing.
-      imap.store(id_set, '+FLAGS', [:Deleted])
-      imap.expunge()
+      # Enable an 'expunge' IMAP command after the items.each loop
+      # Force messages to be marked as "Deleted", the above may or may not be working as expected. "Seen" means nothing if you are going to
+      # delete a message after processing.
+      if @expunge 
+        imap.store(id_set, '+FLAGS', [:Deleted])
+        imap.expunge()
+      end
     end
 
     imap.close
