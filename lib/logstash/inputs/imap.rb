@@ -116,7 +116,12 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     else
       # Multipart message; use the first text/plain part we find
       part = mail.parts.find { |p| p.content_type.match @content_type_re } || mail.parts.first
-      message = part.decoded
+      # Some messages are missing parts such as text/plain. Fall back
+      begin
+           message = part.decoded
+      rescue NoMethodError
+           message = mail.body.decoded
+      end
     end
 
     @codec.decode(message) do |event|
