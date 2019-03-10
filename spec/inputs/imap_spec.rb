@@ -132,4 +132,16 @@ describe LogStash::Inputs::IMAP do
       insist { event.get("message") } == msg_text
     end
   end
+
+  context "when RFC822 mail is requested" do
+    it "should return unmodified mail" do
+      config = {"type" => "imap", "host" => "localhost",
+                "user" => "#{user}", "password" => "#{password}",
+                "rfc822_mail" => true}
+      input = LogStash::Inputs::IMAP.new config
+      input.register
+      event = input.rfc822_mail(subject.to_s)
+      insist { event.get("message") } == subject.to_s
+    end
+  end
 end
