@@ -44,6 +44,7 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-lowercase_headers>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-password>> |<<password,password>>|Yes
 | <<plugins-{type}s-{plugin}-port>> |<<number,number>>|No
+| <<plugins-{type}s-{plugin}-rfc822_mail>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-secure>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-sincedb_path>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-strip_attachments>> |<<boolean,boolean>>|No
@@ -139,6 +140,14 @@ content-type as the event message.
   * There is no default value for this setting.
 
 
+
+[id="plugins-{type}s-{plugin}-rfc822_mail"]
+===== `rfc822_mail`
+
+  * Value type is <<boolean,boolean>>
+  * Default value is `false`
+
+Emit the unparsed RFC822 mail as the event message.
 
 [id="plugins-{type}s-{plugin}-secure"]
 ===== `secure`
