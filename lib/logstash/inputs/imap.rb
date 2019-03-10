@@ -29,7 +29,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   config :delete, :validate => :boolean, :default => false
   config :expunge, :validate => :boolean, :default => false
   config :strip_attachments, :validate => :boolean, :default => false
-  
+
   # For multipart messages, use the first part that has this
   # content-type as the event message.
   config :content_type, :validate => :string, :default => "text/plain"
@@ -90,11 +90,11 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       end
 
       imap.store(id_set, '+FLAGS', @delete ? :Deleted : :Seen)
-  
+
     end
 
   # Enable an 'expunge' IMAP command after the items.each loop
-    if @expunge 
+    if @expunge
     # Force messages to be marked as "Deleted", the above may or may not be working as expected. "Seen" means nothing if you are going to
     # delete a message after processing.
       imap.store(id_set, '+FLAGS', [:Deleted])
