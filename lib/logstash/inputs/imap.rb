@@ -34,6 +34,12 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   # content-type as the event message.
   config :content_type, :validate => :string, :default => "text/plain"
 
+  # Whether to use IMAP uid to track last processed message
+  config :uid_tracking, :validate => :boolean, :default => true
+
+  # Path to file with last run time metadata
+  config :sincedb_path, :validate => :string, :required => false
+
   def register
     require "net/imap" # in stdlib
     require "mail" # gem 'mail'
@@ -48,6 +54,22 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       else
         @port = 143
       end
+    end
+
+    # Load last processed IMAP uid from file if exists
+    if @sincedb_path.nil?
+      datapath = File.join(LogStash::SETTINGS.get_value("path.data"), "plugins", "inputs", "imap")
+      # Ensure that the filepath exists before writing, since it's deeply nested.
+      FileUtils::mkdir_p datapath
+      @sincedb_path = File.join(datapath, ".sincedb_" + Digest::MD5.hexdigest("#{@user}_#{@host}_#{@port}_#{@folder}"))
+    end
+    if File.directory?(@sincedb_path)
+      raise ArgumentError.new("The \"sincedb_path\" argument must point to a file, received a directory: \"#{@sincedb_path}\"")
+    end
+    @logger.info("Using \"sincedb_path\": \"#{@sincedb_path}\"")
+    if File.exist?(@sincedb_path)
+      @uid_last_value = File.read(@sincedb_path)
+      @logger.info("Loading \"uid_last_value\": \"#{@uid_last_value}\"")
     end
 
     @content_type_re = Regexp.new("^" + @content_type)
@@ -75,10 +97,18 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     # EOFError, OpenSSL::SSL::SSLError
     imap = connect
     imap.select(@folder)
-    ids = imap.search("NOT SEEN")
+    if @uid_tracking && @uid_last_value
+      # If there are no new messages, uid_search returns @uid_last_value
+      # because it is the last message, so we need to delete it.
+      ids = imap.uid_search(["UID", (@uid_last_value..-1)]).delete_if { |uid|
+        uid <= @uid_last_value
+      }
+    else
+      ids = imap.uid_search("NOT SEEN")
+    end
 
     ids.each_slice(@fetch_count) do |id_set|
-      items = imap.fetch(id_set, "RFC822")
+      items = imap.uid_fetch(id_set, ["RFC822", "UID"])
       items.each do |item|
         next unless item.attr.has_key?("RFC822")
         mail = Mail.read_from_string(item.attr["RFC822"])
@@ -87,16 +117,21 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         else
           queue << parse_mail(mail)
         end
+        @uid_last_value = item.attr["UID"]
       end
 
+      @logger.debug? && @logger.debug("Saving \"uid_last_value\": \"#{@uid_last_value}\"")
+      # Always save @uid_last_value so when tracking is switched from
+      # "NOT SEEN" to "UID" we will continue from first unprocessed message
+      File.write(@sincedb_path, @uid_last_value) unless @uid_last_value.nil?
       imap.store(id_set, '+FLAGS', @delete ? :Deleted : :Seen)
-
     end
 
-  # Enable an 'expunge' IMAP command after the items.each loop
+    # Enable an 'expunge' IMAP command after the items.each loop
     if @expunge
-    # Force messages to be marked as "Deleted", the above may or may not be working as expected. "Seen" means nothing if you are going to
-    # delete a message after processing.
+      # Force messages to be marked as "Deleted", the above may or may not be
+      # working as expected. "Seen" means nothing if you are going to delete
+      # a message after processing.
       imap.store(id_set, '+FLAGS', [:Deleted])
       imap.expunge()
     end
