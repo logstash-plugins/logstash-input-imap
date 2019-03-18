@@ -120,7 +120,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         @uid_last_value = item.attr["UID"]
       end
 
-      @logger.debug? && @logger.debug("Saving \"uid_last_value\": \"#{@uid_last_value}\"")
+      @logger.info("Saving \"uid_last_value\": \"#{@uid_last_value}\"")
       # Always save @uid_last_value so when tracking is switched from
       # "NOT SEEN" to "UID" we will continue from first unprocessed message
       File.write(@sincedb_path, @uid_last_value) unless @uid_last_value.nil?
