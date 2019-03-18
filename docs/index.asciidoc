@@ -174,10 +174,10 @@ NOTE: it must be a file path and not a directory path.
   * Default value is `false`
 
 IMAP uid is always stored in the file `sincedb_path` regardles of the
-`uid_tracking` setting, so we can switch between "NOT SEEN" and "UID"
-tracking. In transition from the previous plugin version, you first need
-to process at least one mail with `uid_tracking` set to `false` to save
-the last processed IMAP uid and then switch `uid_tracking` to `true`.
+`uid_tracking` setting, so you can switch between "NOT SEEN" and "UID"
+tracking. In transition from the previous plugin version, first process
+at least one mail with `uid_tracking` set to `false` to save the last
+processed IMAP uid and then switch `uid_tracking` to `true`.
 
 [id="plugins-{type}s-{plugin}-user"]
 ===== `user`
