@@ -118,13 +118,20 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
           queue << parse_mail(mail)
         end
         @uid_last_value = item.attr["UID"]
+
+        # Stop mail fetching if it is requested
+        break if @stop_called.true?
       end
 
       @logger.info("Saving \"uid_last_value\": \"#{@uid_last_value}\"")
+
       # Always save @uid_last_value so when tracking is switched from
       # "NOT SEEN" to "UID" we will continue from first unprocessed message
       File.write(@sincedb_path, @uid_last_value) unless @uid_last_value.nil?
       imap.store(id_set, '+FLAGS', @delete ? :Deleted : :Seen)
+
+      # Stop mail fetching if it is requested
+      break if @stop_called.true?
     end
 
     # Enable an 'expunge' IMAP command after the items.each loop
