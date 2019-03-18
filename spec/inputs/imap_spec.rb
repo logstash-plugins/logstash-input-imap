@@ -25,7 +25,7 @@ describe LogStash::Inputs::IMAP do
         allow(imap).to receive(:store)
         allow(ids).to receive(:each_slice).and_return([])
 
-        allow(imap).to receive(:search).with("NOT SEEN").and_return(ids)
+        allow(imap).to receive(:uid_search).with("NOT SEEN").and_return(ids)
         allow(Net::IMAP).to receive(:new).and_return(imap)
       end
     end
