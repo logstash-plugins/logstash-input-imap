@@ -35,7 +35,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   config :content_type, :validate => :string, :default => "text/plain"
 
   # Whether to use IMAP uid to track last processed message
-  config :uid_tracking, :validate => :boolean, :default => true
+  config :uid_tracking, :validate => :boolean, :default => false
 
   # Path to file with last run time metadata
   config :sincedb_path, :validate => :string, :required => false
