@@ -120,7 +120,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         @uid_last_value = item.attr["UID"]
 
         # Stop mail fetching if it is requested
-        break if @stop_called.true?
+        break if stop?
       end
 
       @logger.info("Saving \"uid_last_value\": \"#{@uid_last_value}\"")
@@ -131,7 +131,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       imap.store(id_set, '+FLAGS', @delete ? :Deleted : :Seen)
 
       # Stop mail fetching if it is requested
-      break if @stop_called.true?
+      break if stop?
     end
 
     # Enable an 'expunge' IMAP command after the items.each loop
