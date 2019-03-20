@@ -154,9 +154,9 @@ content-type as the event message.
   * Value type is <<string,string>>
   * There is no default value for this setting.
 
-Path of the sincedb database file (keeps track of the last processed IMAP
-uid) that will be written to disk. The default will write sincedb files to
-`<path.data>/plugins/inputs/imap`
+Path of the sincedb database file (keeps track of the UID of the last processed
+mail) that will be written to disk. The default will write sincedb file to
+`<path.data>/plugins/inputs/imap` directory.
 NOTE: it must be a file path and not a directory path.
 
 [id="plugins-{type}s-{plugin}-strip_attachments"]
@@ -173,11 +173,17 @@ NOTE: it must be a file path and not a directory path.
   * Value type is <<boolean,boolean>>
   * Default value is `false`
 
-IMAP uid is always stored in the file `sincedb_path` regardles of the
-`uid_tracking` setting, so you can switch between "NOT SEEN" and "UID"
-tracking. In transition from the previous plugin version, first process
-at least one mail with `uid_tracking` set to `false` to save the last
-processed IMAP uid and then switch `uid_tracking` to `true`.
+When the IMAP input plugin connects to the mailbox for the first time and
+the UID of the last processed mail is not yet known, the unread mails are
+first downloaded and the UID of the last processed mail is saved. From
+this point on, if `uid_tracking` is set to `true`, all new mail will be
+downloaded regardless of whether they are marked as read or unread. This
+allows users or other services to use the mailbox simultaneously with the
+IMAP input plugin. UID of the last processed mail is always saved regardles
+of the `uid_tracking` value, so you can switch its value as needed. In
+transition from the previous IMAP input plugin version, first process at least
+one mail with `uid_tracking` set to `false` to save the UID of the last
+processed mail and then switch `uid_tracking` to `true`.
 
 [id="plugins-{type}s-{plugin}-user"]
 ===== `user`
