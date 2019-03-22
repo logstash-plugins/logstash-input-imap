@@ -128,19 +128,13 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       # Always save @uid_last_value so when tracking is switched from
       # "NOT SEEN" to "UID" we will continue from first unprocessed message
       File.write(@sincedb_path, @uid_last_value) unless @uid_last_value.nil?
-      imap.store(id_set, '+FLAGS', @delete ? :Deleted : :Seen)
+
+      # Mark messages as processed
+      imap.store(id_set, '+FLAGS', @delete || @expunge ? :Deleted : :Seen)
+      imap.expunge() if @expunge
 
       # Stop mail fetching if it is requested
       break if stop?
-    end
-
-    # Enable an 'expunge' IMAP command after the items.each loop
-    if @expunge
-      # Force messages to be marked as "Deleted", the above may or may not be
-      # working as expected. "Seen" means nothing if you are going to delete
-      # a message after processing.
-      imap.store(id_set, '+FLAGS', [:Deleted])
-      imap.expunge()
     end
 
     imap.close
