@@ -108,18 +108,20 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     end
 
     ids.each_slice(@fetch_count) do |id_set|
-      items = imap.uid_fetch(id_set, ["RFC822", "UID"])
+      items = imap.uid_fetch(id_set, ["BODY.PEEK[]", "UID"])
       items.each do |item|
-        next unless item.attr.has_key?("RFC822")
-        mail = Mail.read_from_string(item.attr["RFC822"])
+        next unless item.attr.has_key?("BODY[]")
+        mail = Mail.read_from_string(item.attr["BODY[]"])
         if @strip_attachments
           queue << parse_mail(mail.without_attachments!)
         else
           queue << parse_mail(mail)
         end
+        # Mark message as processed
         @uid_last_value = item.attr["UID"]
+        imap.uid_store(@uid_last_value, '+FLAGS', @delete || @expunge ? :Deleted : :Seen)
 
-        # Stop mail fetching if it is requested
+        # Stop message processing if it is requested
         break if stop?
       end
 
@@ -129,11 +131,10 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       # "NOT SEEN" to "UID" we will continue from first unprocessed message
       File.write(@sincedb_path, @uid_last_value) unless @uid_last_value.nil?
 
-      # Mark messages as processed
-      imap.store(id_set, '+FLAGS', @delete || @expunge ? :Deleted : :Seen)
+      # Expunge messages
       imap.expunge() if @expunge
 
-      # Stop mail fetching if it is requested
+      # Stop message fetching if it is requested
       break if stop?
     end
 
