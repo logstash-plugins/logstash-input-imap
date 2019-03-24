@@ -125,21 +125,28 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         break if stop?
       end
 
-      @logger.info("Saving \"uid_last_value\": \"#{@uid_last_value}\"")
-
-      # Always save @uid_last_value so when tracking is switched from
-      # "NOT SEEN" to "UID" we will continue from first unprocessed message
-      File.write(@sincedb_path, @uid_last_value) unless @uid_last_value.nil?
-
-      # Expunge messages
+      # Expunge deleted messages
       imap.expunge() if @expunge
 
       # Stop message fetching if it is requested
       break if stop?
     end
 
-    imap.close
-    imap.disconnect
+  rescue => e
+    @logger.error("Encountered error #{e.class}", :message => e.message, :backtrace => e.backtrace)
+    # Do not raise error, check_mail will be invoked in the next run time
+
+  ensure
+    # Close the connection (and ignore errors)
+    imap.close rescue nil
+    imap.disconnect rescue nil
+
+    # Always save @uid_last_value so when tracking is switched from
+    # "NOT SEEN" to "UID" we will continue from first unprocessed message
+    if @uid_last_value
+      @logger.info("Saving \"uid_last_value\": \"#{@uid_last_value}\"")
+      File.write(@sincedb_path, @uid_last_value)
+    end
   end
 
   def parse_mail(mail)
