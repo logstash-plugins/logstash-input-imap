@@ -3,6 +3,7 @@ require "logstash/devutils/rspec/spec_helper"
 require "logstash/inputs/imap"
 require "mail"
 require "net/imap"
+require "base64"
 
 
 describe LogStash::Inputs::IMAP do
@@ -129,6 +130,33 @@ describe LogStash::Inputs::IMAP do
       input = LogStash::Inputs::IMAP.new config
       input.register
       event = input.parse_mail(subject)
+      insist { event.get("message") } == msg_text
+    end
+  end
+
+  context "when mail_in_attachment selected" do
+    it "should parse attachment as the actual mail" do
+      # Some servers forward mail as an attachment in an encapsulating mail.
+      # As an example, the server PowerMTA, delivers unmatched bounce messages,
+      # in a base64 encoded attachment, named "email.txt".
+      encapsulating_mail = Mail.new do
+        from     "mta@example.com"
+        to       "unmatched@example.com"
+        subject  "MTA unmatched message test"
+        date     Time.new
+        body     "The MTA could not recognize the attached message test"
+      end
+      encapsulating_mail.attachments['email.txt'] = {
+        :mime_type => 'text/plain', :content_transfer_encoding => 'base64',
+        :content => Base64.encode64(subject.to_s)
+      }
+      config = {"type" => "imap", "host" => "localhost",
+                "user" => "#{user}", "password" => "#{password}",
+                "mail_in_attachment" => "true"}
+
+      input = LogStash::Inputs::IMAP.new config
+      input.register
+      event = input.parse_mail(encapsulating_mail)
       insist { event.get("message") } == msg_text
     end
   end

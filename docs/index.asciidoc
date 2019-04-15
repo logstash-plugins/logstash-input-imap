@@ -45,6 +45,7 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-password>> |<<password,password>>|Yes
 | <<plugins-{type}s-{plugin}-port>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-secure>> |<<boolean,boolean>>|No
+| <<plugins-{type}s-{plugin}-mail_in_attachment>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-strip_attachments>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-user>> |<<string,string>>|Yes
 | <<plugins-{type}s-{plugin}-verify_cert>> |<<boolean,boolean>>|No
@@ -146,8 +147,17 @@ content-type as the event message.
 
 
 
+[id="plugins-{type}s-{plugin}-mail_in_attachment"]
+===== `mail_in_attachment`
+
+  * Used when the relevant mail is delivered as an attachment in an encapsulating email
+  * Value type is <<boolean,boolean>>
+  * Default value is `false`
+
+
+
 [id="plugins-{type}s-{plugin}-strip_attachments"]
-===== `strip_attachments` 
+===== `strip_attachments`
 
   * Value type is <<boolean,boolean>>
   * Default value is `false`
