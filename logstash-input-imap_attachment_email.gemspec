@@ -1,13 +1,13 @@
 Gem::Specification.new do |s|
 
-  s.name            = 'logstash-input-imap'
-  s.version         = '3.0.6'
+  s.name            = 'logstash-input-imap_attachment_email'
+  s.version         = '0.1.0'
   s.licenses        = ['Apache License (2.0)']
-  s.summary         = "Reads mail from an IMAP server"
-  s.description     = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
-  s.authors         = ["Elastic"]
-  s.email           = 'info@elastic.co'
-  s.homepage        = "http://www.elastic.co/guide/en/logstash/current/index.html"
+  s.summary         = "Reads mail from an IMAP server and optionally parses it's attachment as an email"
+  s.description     = "This is a simple addition to logstash-input-imap adding the option to parse an attachment as the actual email. This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
+  s.authors         = ["Elastic", "Rulecom"]
+  s.email           = ["info@elastic.co", "info@rule.se"]
+  s.homepage        = "https://github.com/rulecom/logstash-input-imap"
   s.require_paths = ["lib"]
 
   # Files

@@ -9,7 +9,7 @@ require "socket" # for Socket.gethostname
 #
 # Periodically scan an IMAP folder (`INBOX` by default) and move any read messages
 # to the trash.
-class LogStash::Inputs::IMAP < LogStash::Inputs::Base
+class LogStash::Inputs::IMAPAttachmentEmail < LogStash::Inputs::Base
   config_name "imap"
 
   default :codec, "plain"

@@ -1,6 +1,12 @@
-# Logstash Plugin
+# Rule's contribution
+This is a simple addition, by [Rule Communication](https://rule.se) to the [Elastic  logstash-input-imap plugin](https://github.com/logstash-plugins/logstash-input-imap). It 
+adds the 
+option to 
+parse an email, which is attached to another, encapsulating email.
 
-[![Travis Build Status](https://travis-ci.org/logstash-plugins/logstash-input-imap.svg)](https://travis-ci.org/logstash-plugins/logstash-input-imap)
+A fast way of running spec tests is `jruby --dev -G -W0 -S rspec` 
+
+# Logstash Plugin
 
 This is a plugin for [Logstash](https://github.com/elastic/logstash).
 
