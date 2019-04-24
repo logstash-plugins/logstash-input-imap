@@ -68,7 +68,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     end
     @logger.info("Using \"sincedb_path\": \"#{@sincedb_path}\"")
     if File.exist?(@sincedb_path)
-      @uid_last_value = File.read(@sincedb_path)
+      @uid_last_value = File.read(@sincedb_path).to_i
       @logger.info("Loading \"uid_last_value\": \"#{@uid_last_value}\"")
     end
 
