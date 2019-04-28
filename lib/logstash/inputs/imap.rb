@@ -28,6 +28,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   config :check_interval, :validate => :number, :default => 300
   config :delete, :validate => :boolean, :default => false
   config :expunge, :validate => :boolean, :default => false
+  config :mail_in_attachment, :validate => :boolean, :default => false
   config :strip_attachments, :validate => :boolean, :default => false
 
   # For multipart messages, use the first part that has this
@@ -150,6 +151,10 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   end
 
   def parse_mail(mail)
+    if @mail_in_attachment
+      attachment = mail.attachments.first.body
+      mail = Mail.new(attachment)
+    end
     # Add a debug message so we can track what message might cause an error later
     @logger.debug? && @logger.debug("Working with message_id", :message_id => mail.message_id)
     # TODO(sissel): What should a multipart message look like as an event?
