@@ -1,3 +1,6 @@
+## 3.0.7
+  - Added facility to use IMAP uid to retrieve new mails instead of "NOT SEEN" [#36](https://github.com/logstash-plugins/logstash-input-imap/pull/36)
+
 ## 3.0.6
   - Docs: Set the default_codec doc attribute.
 
