@@ -148,6 +148,7 @@ content-type as the event message.
   * Default value is `false`
 
 Emit the unparsed RFC822 mail as the event message.
+NOTE: `strip_attachments` will be ignored if `rfc822_mail` is enabled.
 
 [id="plugins-{type}s-{plugin}-secure"]
 ===== `secure`
@@ -174,7 +175,7 @@ NOTE: it must be a file path and not a directory path.
   * Value type is <<boolean,boolean>>
   * Default value is `false`
 
-
+NOTE: `strip_attachments` will be ignored if `rfc822_mail` is enabled.
 
 [id="plugins-{type}s-{plugin}-uid_tracking"]
 ===== `uid_tracking`
