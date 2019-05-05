@@ -73,6 +73,11 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       @logger.info("Loading \"uid_last_value\": \"#{@uid_last_value}\"")
     end
 
+    if @rfc822_mail
+      require "logstash/codecs/plain"
+      @codec = LogStash::Codecs::Plain.new("charset" => "ASCII-8BIT")
+    end
+
     @content_type_re = Regexp.new("^" + @content_type)
   end # def register
 
@@ -206,6 +211,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   def rfc822_mail(message)
     @codec.decode(message) do |event|
       decorate(event)
+      event.set('[@metadata][rfc822_mail]', message)
       event
     end
   end

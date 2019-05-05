@@ -147,7 +147,11 @@ content-type as the event message.
   * Value type is <<boolean,boolean>>
   * Default value is `false`
 
-Emit the unparsed RFC822 mail as the event message.
+Emit the unparsed RFC822 mail as the event message converted to UTF-8 using
+the `plain` codec and as the field `[@metadata][rfc822_mail]` in the original
+`ASCII-8BIT` encoding. Whenever non-UTF-8 mail is converted to UTF-8, 8-bit
+characters are corrupted. Therefore, the `[@metadata][rfc822_mail]` field must
+be used for further processing in the filters.
 NOTE: `strip_attachments` will be ignored if `rfc822_mail` is enabled.
 
 [id="plugins-{type}s-{plugin}-secure"]
