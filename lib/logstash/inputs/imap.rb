@@ -93,6 +93,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   end
 
   def check_mail(queue)
+    uid_start_value = @uid_last_value
     # TODO(sissel): handle exceptions happening during runtime:
     # EOFError, OpenSSL::SSL::SSLError
     imap = connect
@@ -143,7 +144,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
     # Always save @uid_last_value so when tracking is switched from
     # "NOT SEEN" to "UID" we will continue from first unprocessed message
-    if @uid_last_value
+    if uid_start_value != @uid_last_value
       @logger.info("Saving \"uid_last_value\": \"#{@uid_last_value}\"")
       File.write(@sincedb_path, @uid_last_value)
     end
