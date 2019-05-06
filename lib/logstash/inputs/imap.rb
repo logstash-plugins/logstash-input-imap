@@ -94,8 +94,6 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
   def check_mail(queue)
     uid_start_value = @uid_last_value
-    # TODO(sissel): handle exceptions happening during runtime:
-    # EOFError, OpenSSL::SSL::SSLError
     imap = connect
     imap.select(@folder)
     if @uid_tracking && @uid_last_value
