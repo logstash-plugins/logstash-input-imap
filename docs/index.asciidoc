@@ -42,6 +42,7 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-folder>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-host>> |<<string,string>>|Yes
 | <<plugins-{type}s-{plugin}-lowercase_headers>> |<<boolean,boolean>>|No
+| <<plugins-{type}s-{plugin}-mark_read>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-password>> |<<password,password>>|Yes
 | <<plugins-{type}s-{plugin}-port>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-secure>> |<<boolean,boolean>>|No
@@ -80,7 +81,7 @@ content-type as the event message.
   * Value type is <<boolean,boolean>>
   * Default value is `false`
 
-
+Flag processed messages as deleted, the message will still be available on the server.
 
 [id="plugins-{type}s-{plugin}-expunge"]
 ===== `expunge`
@@ -88,7 +89,7 @@ content-type as the event message.
   * Value type is <<boolean,boolean>>
   * Default value is `false`
 
-
+Expunge messages in the IMAP folder. This will permanently delete messages from the IMAP server.
 
 [id="plugins-{type}s-{plugin}-fetch_count"]
 ===== `fetch_count`
@@ -121,6 +122,16 @@ content-type as the event message.
   * Value type is <<boolean,boolean>>
   * Default value is `true`
 
+
+
+[id="plugins-{type}s-{plugin}-mark_read"]
+===== `expunge`
+
+  * Value type is <<boolean,boolean>>
+  * Default value is `true`
+
+Flag processed messages as read. Set this to `false` when uid_tracking is enabled
+to avoid making any changes on the server
 
 
 [id="plugins-{type}s-{plugin}-password"]
