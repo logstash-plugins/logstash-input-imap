@@ -97,12 +97,18 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     # EOFError, OpenSSL::SSL::SSLError
     imap = connect
     imap.select(@folder)
-    if @uid_tracking && @uid_last_value
-      # If there are no new messages, uid_search returns @uid_last_value
-      # because it is the last message, so we need to delete it.
-      ids = imap.uid_search(["UID", (@uid_last_value+1..-1)]).delete_if { |uid|
-        uid <= @uid_last_value
-      }
+
+    if @uid_tracking
+      if @uid_last_value
+        # If there are no new messages, uid_search returns @uid_last_value
+        # because it is the last message, so we need to delete it.
+        ids = imap.uid_search(["UID", (@uid_last_value+1..-1)]).delete_if { |uid|
+          uid <= @uid_last_value
+        }
+      else
+        @logger.debug? && @logger.debug("#{@user}@#{@host}:#{@port}/#{@folder}: No uid_last_value, fetching ALL..")
+        ids = imap.uid_search("ALL")
+      end
     else
       ids = imap.uid_search("NOT SEEN")
     end
