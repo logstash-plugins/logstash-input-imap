@@ -156,7 +156,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         attachments = find_attachments(part, attachments)
       end
     elsif parts.filename
-      attachment = { "filename": parts.filename }
+      attachment = { "filename" => parts.filename }
       if @save_attachments
         attachment['data'] = parts.body.encoded
       end
