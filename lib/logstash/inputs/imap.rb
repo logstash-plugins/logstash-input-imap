@@ -131,8 +131,8 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         end
         # Mark message as processed
         @uid_last_value = item.attr["UID"]
-        @logger.debug? && @logger.debug("#{@user}@#{@host}:#{@port}/#{@folder}: Marking #{id_set} as read: #{mark_read}, delete: #{@delete}, expunge: #{@expunge}")
         if (@uid_tracking && @mark_read) || @delete || @expunge
+          @logger.debug? && @logger.debug("#{@user}@#{@host}:#{@port}/#{@folder}: Marking #{item.attr["UID"]} as read: #{mark_read}, delete: #{@delete}, expunge: #{@expunge}")
           imap.uid_store(@uid_last_value, '+FLAGS', @delete || @expunge ? :Deleted : :Seen)
         end
         # Stop message processing if it is requested
