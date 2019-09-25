@@ -125,13 +125,13 @@ Expunge messages in the IMAP folder. This will permanently delete messages from 
 
 
 [id="plugins-{type}s-{plugin}-mark_read"]
-===== `expunge`
+===== `mark_read`
 
   * Value type is <<boolean,boolean>>
   * Default value is `true`
 
 Flag processed messages as read. Set this to `false` when uid_tracking is enabled
-to avoid making any changes on the server
+to avoid making any changes on the server.
 
 
 [id="plugins-{type}s-{plugin}-password"]
