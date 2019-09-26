@@ -210,8 +210,8 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       end
 
       # Add attachments
-      if attachments.length > 0
-        event.set('attachments', attachments)
+      if attachments and attachments.length > 0
+        event.set('attachments', attachments) if
       end
 
       decorate(event)
