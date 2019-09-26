@@ -39,6 +39,7 @@ describe LogStash::Inputs::IMAP do
   msg_time = Time.new
   msg_text = "foo\nbar\nbaz"
   msg_html = "<p>a paragraph</p>\n\n"
+  msg_binary = "\x42\x43\x44"
 
   subject do
     Mail.new do
@@ -48,6 +49,7 @@ describe LogStash::Inputs::IMAP do
       date     msg_time
       body     msg_text
       add_file :filename => "some.html", :content => msg_html
+      add_file :filename => "image.png", :content => msg_binary
     end
   end
 
@@ -61,6 +63,7 @@ describe LogStash::Inputs::IMAP do
         input.register
         event = input.parse_mail(subject)
         insist { event.get("message") } == msg_text
+        puts subject
       end
     end
 
@@ -131,5 +134,28 @@ describe LogStash::Inputs::IMAP do
       event = input.parse_mail(subject)
       insist { event.get("message") } == msg_text
     end
+  end
+
+  context "with multiple attachments" do
+    it "should extract filenames" do
+      config = {"type" => "imap", "host" => "localhost",
+                "user" => "#{user}", "password" => "#{password}"}
+
+      input = LogStash::Inputs::IMAP.new config
+      input.register
+      event = input.parse_mail(subject)
+      insist { event.get("attachments") } == [{"filename"=>"some.html"}, {"filename"=>"image.png"}]
+    end
+
+    it "should extract the base64 content" do
+      config = {"type" => "imap", "host" => "localhost",
+        "user" => "#{user}", "password" => "#{password}",
+        "save_attachments" => true}
+
+      input = LogStash::Inputs::IMAP.new config
+      input.register
+      event = input.parse_mail(subject)
+      insist { event.get("attachments") } == [{"data"=>"PHA+YSBwYXJhZ3JhcGg8L3A+Cgo=\r\n", "filename"=>"some.html"}, {"data"=>"QkNE\r\n", "filename"=>"image.png"}]
+      end
   end
 end
