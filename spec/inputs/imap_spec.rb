@@ -63,7 +63,6 @@ describe LogStash::Inputs::IMAP do
         input.register
         event = input.parse_mail(subject)
         insist { event.get("message") } == msg_text
-        puts subject
       end
     end
 
