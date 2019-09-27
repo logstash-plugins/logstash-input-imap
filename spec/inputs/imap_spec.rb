@@ -135,7 +135,7 @@ describe LogStash::Inputs::IMAP do
     end
   end
 
-  context "with multiple attachments" do
+  context "with attachments" do
     it "should extract filenames" do
       config = {"type" => "imap", "host" => "localhost",
                 "user" => "#{user}", "password" => "#{password}"}
