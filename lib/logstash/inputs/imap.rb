@@ -152,7 +152,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
   def parse_attachments(mail)
     attachments = []
-    mail.all_parts.select{ |p| p.attachment?}.each do |attachment|
+    mail.attachments.each do |attachment|
       if @save_attachments
         attachments << { "filename" => attachment.filename, "data" => attachment.body.encoded }
       else
