@@ -29,6 +29,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   config :delete, :validate => :boolean, :default => false
   config :expunge, :validate => :boolean, :default => false
   config :strip_attachments, :validate => :boolean, :default => false
+  config :rfc822_mail, :validate => :boolean, :default => false
 
   # For multipart messages, use the first part that has this
   # content-type as the event message.
@@ -72,6 +73,11 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       @logger.info("Loading \"uid_last_value\": \"#{@uid_last_value}\"")
     end
 
+    if @rfc822_mail
+      require "logstash/codecs/plain"
+      @codec = LogStash::Codecs::Plain.new("charset" => "ASCII-8BIT")
+    end
+
     @content_type_re = Regexp.new("^" + @content_type)
   end # def register
 
@@ -111,11 +117,15 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       items = imap.uid_fetch(id_set, ["BODY.PEEK[]", "UID"])
       items.each do |item|
         next unless item.attr.has_key?("BODY[]")
-        mail = Mail.read_from_string(item.attr["BODY[]"])
-        if @strip_attachments
-          queue << parse_mail(mail.without_attachments!)
+        if @rfc822_mail
+          queue << rfc822_mail(item.attr["BODY[]"])
         else
-          queue << parse_mail(mail)
+          mail = Mail.read_from_string(item.attr["BODY[]"])
+          if @strip_attachments
+            queue << parse_mail(mail.without_attachments!)
+          else
+            queue << parse_mail(mail)
+          end
         end
         # Mark message as processed
         @uid_last_value = item.attr["UID"]
@@ -194,6 +204,14 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       end
 
       decorate(event)
+      event
+    end
+  end
+
+  def rfc822_mail(message)
+    @codec.decode(message) do |event|
+      decorate(event)
+      event.set('[@metadata][rfc822_mail]', message)
       event
     end
   end
