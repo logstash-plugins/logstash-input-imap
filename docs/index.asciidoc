@@ -139,14 +139,6 @@ content-type as the event message.
   * Value type is <<number,number>>
   * There is no default value for this setting.
 
-
-
-[id="plugins-{type}s-{plugin}-secure"]
-===== `secure`
-
-  * Value type is <<boolean,boolean>>
-  * Default value is `true`
-
 [id="plugins-{type}s-{plugin}-save_attachments"]
 ===== `save_attachments`
 
@@ -154,6 +146,12 @@ content-type as the event message.
   * Default value is `false`
 
 When set to true the content of attachments will be included in the `attachments.data` field.
+
+[id="plugins-{type}s-{plugin}-secure"]
+===== `secure`
+
+  * Value type is <<boolean,boolean>>
+  * Default value is `true`
 
 [id="plugins-{type}s-{plugin}-sincedb_path"]
 ===== `sincedb_path`
