@@ -158,10 +158,14 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       # No multipart message, just use the body as the event text
       message = mail.body.decoded
     else
-      # Multipart message; use the first text/plain part we find
-      part = mail.parts.find { |p| p.content_type.match @content_type_re } || mail.parts.first
+      if mail.parts.map { |p| p.content_type.match Regexp.new("^multipart/alternative") }
+        part = mail.html_part || mail.text_part
+      else
+        part = mail.parts.map { |p| p.content_type.match @content_type_re } || mail.parts.map { |p| p.content_type.match Regexp.new("^text/plain") } || mail.parts.first
+      end    
+      
       message = part.decoded
-    end
+    end || mi 
 
     @codec.decode(message) do |event|
       # Use the 'Date' field as the timestamp
@@ -175,7 +179,11 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         # Details at:
         #   https://github.com/mikel/mail/blob/master/README.md#encodings
         #   http://tools.ietf.org/html/rfc2047#section-2
-        value = transcode_to_utf8(header.decoded.to_s)
+        if header.decoded != nil
+          value = transcode_to_utf8(header.decoded.to_s)
+        else
+          value = false
+        end         
 
         # Assume we already processed the 'date' above.
         next if name == "Date"
