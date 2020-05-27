@@ -44,8 +44,8 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-lowercase_headers>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-password>> |<<password,password>>|Yes
 | <<plugins-{type}s-{plugin}-port>> |<<number,number>>|No
-| <<plugins-{type}s-{plugin}-secure>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-save_attachments>> |<<boolean,boolean>>|No
+| <<plugins-{type}s-{plugin}-secure>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-sincedb_path>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-strip_attachments>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-uid_tracking>> |<<boolean,boolean>>|No
