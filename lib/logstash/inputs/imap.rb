@@ -29,6 +29,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   config :delete, :validate => :boolean, :default => false
   config :expunge, :validate => :boolean, :default => false
   config :strip_attachments, :validate => :boolean, :default => false
+  config :save_attachments, :validate => :boolean, :default => false
 
   # For multipart messages, use the first part that has this
   # content-type as the event message.
@@ -149,6 +150,18 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     end
   end
 
+  def parse_attachments(mail)
+    attachments = []
+    mail.attachments.each do |attachment|
+      if @save_attachments
+        attachments << { "filename" => attachment.filename, "data" => attachment.body.encoded }
+      else
+        attachments << { "filename" => attachment.filename}
+      end
+    end
+    return attachments
+  end
+
   def parse_mail(mail)
     # Add a debug message so we can track what message might cause an error later
     @logger.debug? && @logger.debug("Working with message_id", :message_id => mail.message_id)
@@ -161,6 +174,9 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       # Multipart message; use the first text/plain part we find
       part = mail.parts.find { |p| p.content_type.match @content_type_re } || mail.parts.first
       message = part.decoded
+
+      # Parse attachments
+      attachments = parse_attachments(mail)
     end
 
     @codec.decode(message) do |event|
@@ -191,6 +207,11 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         when nil
           event.set(name, value)
         end
+      end
+
+      # Add attachments
+      if attachments && attachments.length > 0
+        event.set('attachments', attachments)
       end
 
       decorate(event)

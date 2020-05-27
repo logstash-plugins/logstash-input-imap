@@ -5,6 +5,7 @@ require "logstash/devutils/rspec/shared_examples"
 require "logstash/inputs/imap"
 require "mail"
 require "net/imap"
+require "base64"
 
 
 describe LogStash::Inputs::IMAP do
@@ -41,6 +42,8 @@ describe LogStash::Inputs::IMAP do
   msg_time = Time.new
   msg_text = "foo\nbar\nbaz"
   msg_html = "<p>a paragraph</p>\n\n"
+  msg_binary = "\x42\x43\x44"
+  msg_unencoded = "raw text 🐐"
 
   subject do
     Mail.new do
@@ -50,6 +53,8 @@ describe LogStash::Inputs::IMAP do
       date     msg_time
       body     msg_text
       add_file :filename => "some.html", :content => msg_html
+      add_file :filename => "image.png", :content => msg_binary
+      add_file :filename => "unencoded.data", :content => msg_unencoded, :content_transfer_encoding => "7bit"
     end
   end
 
@@ -133,5 +138,36 @@ describe LogStash::Inputs::IMAP do
       event = input.parse_mail(subject)
       insist { event.get("message") } == msg_text
     end
+  end
+
+  context "with attachments" do
+    it "should extract filenames" do
+      config = {"type" => "imap", "host" => "localhost",
+                "user" => "#{user}", "password" => "#{password}"}
+
+      input = LogStash::Inputs::IMAP.new config
+      input.register
+      event = input.parse_mail(subject)
+      insist { event.get("attachments") } == [
+        {"filename"=>"some.html"},
+        {"filename"=>"image.png"},
+        {"filename"=>"unencoded.data"}
+      ]
+    end
+
+    it "should extract the encoded content" do
+      config = {"type" => "imap", "host" => "localhost",
+        "user" => "#{user}", "password" => "#{password}",
+        "save_attachments" => true}
+
+      input = LogStash::Inputs::IMAP.new config
+      input.register
+      event = input.parse_mail(subject)
+      insist { event.get("attachments") } == [
+        {"data"=> Base64.encode64(msg_html).encode(crlf_newline: true), "filename"=>"some.html"},
+        {"data"=> Base64.encode64(msg_binary).encode(crlf_newline: true), "filename"=>"image.png"},
+        {"data"=> msg_unencoded, "filename"=>"unencoded.data"}
+      ]
+      end
   end
 end
