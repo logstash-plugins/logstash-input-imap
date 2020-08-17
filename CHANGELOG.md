@@ -1,3 +1,7 @@
+## 3.1.0
+  - Adds an option to recursively search the message parts for attachment and inline attachment filenames. If the save_attachments option is set to true, the content of attachments is included in the `attachments.data` field. The attachment data can then be used by the Elasticsearch Ingest Attachment Processor Plugin.
+  [#48](https://github.com/logstash-plugins/logstash-input-imap/pull/48)
+
 ## 3.0.7
   - Added facility to use IMAP uid to retrieve new mails instead of "NOT SEEN" [#36](https://github.com/logstash-plugins/logstash-input-imap/pull/36)
 
