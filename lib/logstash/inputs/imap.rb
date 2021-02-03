@@ -181,8 +181,12 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
     @codec.decode(message) do |event|
       # Use the 'Date' field as the timestamp
-      event.timestamp = LogStash::Timestamp.new(mail.date.to_time)
-
+      if  mail.date.nil?
+        event.timestamp = LogStash::Timestamp.new()
+      else
+        event.timestamp = LogStash::Timestamp.new(mail.date.to_time)
+      end
+      
       # Add fields: Add message.header_fields { |h| h.name=> h.value }
       mail.header_fields.each do |header|
         # 'header.name' can sometimes be a Mail::Multibyte::Chars, get it in String form
