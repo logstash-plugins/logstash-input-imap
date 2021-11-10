@@ -29,8 +29,8 @@ to the trash.
 ==== Compatibility with the Elastic Common Schema (ECS)
 
 The plugin includes sensible defaults that change based on <<plugins-{type}s-{plugin}-ecs_compatibility,ECS compatibility mode>>.
-When ECS compatibility is disabled, headers and attachments are targeted at the root level.
-When targeting an ECS versionn, headers and attachments target `@metadata` sub-fields unless configured otherwise in order
+When ECS compatibility is disabled, mail headers and attachments are targeted at the root level.
+When targeting an ECS version, headers and attachments target `@metadata` sub-fields unless configured otherwise in order
 to avoid conflict with ECS fields.
 See <<plugins-{type}s-{plugin}-headers_target>>, and <<plugins-{type}s-{plugin}-attachments_target>>.
 
