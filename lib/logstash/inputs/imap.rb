@@ -23,15 +23,17 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
   config :folder, :validate => :string, :default => 'INBOX'
   config :fetch_count, :validate => :number, :default => 50
-  config :lowercase_headers, :validate => :boolean, :default => true
   config :check_interval, :validate => :number, :default => 300
+
+  config :lowercase_headers, :validate => :boolean, :default => true
+
   config :delete, :validate => :boolean, :default => false
   config :expunge, :validate => :boolean, :default => false
+
   config :strip_attachments, :validate => :boolean, :default => false
   config :save_attachments, :validate => :boolean, :default => false
 
-  # For multipart messages, use the first part that has this
-  # content-type as the event message.
+  # For multipart messages, use the first part that has this content-type as the event message.
   config :content_type, :validate => :string, :default => "text/plain"
 
   # Whether to use IMAP uid to track last processed message
