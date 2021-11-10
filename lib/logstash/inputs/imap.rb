@@ -5,11 +5,20 @@ require "logstash/timestamp"
 require "stud/interval"
 require 'fileutils'
 
+require 'logstash/plugin_mixins/ecs_compatibility_support'
+require 'logstash/plugin_mixins/ecs_compatibility_support/target_check'
+require 'logstash/plugin_mixins/validator_support/field_reference_validation_adapter'
+
 # Read mails from IMAP server
 #
 # Periodically scan an IMAP folder (`INBOX` by default) and move any read messages
 # to the trash.
 class LogStash::Inputs::IMAP < LogStash::Inputs::Base
+
+  include LogStash::PluginMixins::ECSCompatibilitySupport(:disabled, :v1, :v8 => :v1)
+
+  extend LogStash::PluginMixins::ValidatorSupport::FieldReferenceValidationAdapter
+
   config_name "imap"
 
   default :codec, "plain"
@@ -28,6 +37,8 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
   config :lowercase_headers, :validate => :boolean, :default => true
 
+  config :headers_target, :validate => :field_reference # ECS default: [@metadata][input][imap][headers]
+
   config :delete, :validate => :boolean, :default => false
   config :expunge, :validate => :boolean, :default => false
 
@@ -42,6 +53,23 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
   # Path to file with last run time metadata
   config :sincedb_path, :validate => :string, :required => false
+
+  def initialize(*params)
+    super
+
+    if ecs_compatibility != :disabled # set ECS target defaults
+      @headers_target = '[@metadata][input][imap][headers]' unless original_params.include?('headers_target')
+    end
+    unless @headers_target.nil?
+      @headers_target = normalize_field_ref(@headers_target)
+    end
+  end
+
+  def normalize_field_ref(target)
+    # so we can later event.set("#{target}[#{name}]", ...)
+    target.match?(/\A[^\[\]]+\z/) ? "[#{target}]" : target
+  end
+  private :normalize_field_ref
 
   def register
     require "net/imap" # in stdlib
@@ -204,16 +232,16 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         #   http://tools.ietf.org/html/rfc2047#section-2
         value = transcode_to_utf8(header.decoded.to_s)
 
-        case (field = event.get(name))
+        targeted_name = "#{@headers_target}[#{name}]"
+        case (field = event.get(targeted_name))
         when String
-          # promote string to array if a header appears multiple times
-          # (like 'received')
-          event.set(name, [field, value])
+          # promote string to array if a header appears multiple times (like 'received')
+          event.set(targeted_name, [field, value])
         when Array
           field << value
-          event.set(name, field)
+          event.set(targeted_name, field)
         when nil
-          event.set(name, value)
+          event.set(targeted_name, value)
         end
       end
 
