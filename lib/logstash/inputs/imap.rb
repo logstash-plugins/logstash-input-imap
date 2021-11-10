@@ -3,7 +3,6 @@ require "logstash/inputs/base"
 require "logstash/namespace"
 require "logstash/timestamp"
 require "stud/interval"
-require "socket" # for Socket.gethostname
 
 # Read mails from IMAP server
 #

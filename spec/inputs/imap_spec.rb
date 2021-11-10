@@ -1,12 +1,10 @@
 # encoding: utf-8
 require "logstash/devutils/rspec/spec_helper"
-require "insist"
 require "logstash/devutils/rspec/shared_examples"
 require "logstash/inputs/imap"
 require "mail"
 require "net/imap"
 require "base64"
-
 
 describe LogStash::Inputs::IMAP do
 
@@ -67,7 +65,7 @@ describe LogStash::Inputs::IMAP do
         input = LogStash::Inputs::IMAP.new config
         input.register
         event = input.parse_mail(subject)
-        insist { event.get("message") } == msg_text
+        expect( event.get("message") ).to eql msg_text
       end
     end
 
@@ -80,7 +78,7 @@ describe LogStash::Inputs::IMAP do
         input = LogStash::Inputs::IMAP.new config
         input.register
         event = input.parse_mail(subject)
-        insist { event.get("message") } == msg_html
+        expect( event.get("message") ).to eql msg_html
       end
     end
   end
@@ -94,7 +92,7 @@ describe LogStash::Inputs::IMAP do
       input = LogStash::Inputs::IMAP.new config
       input.register
       event = input.parse_mail(subject)
-      insist { event.get("subject") } == "foo : bar"
+      expect( event.get("subject") ).to eql "foo : bar"
     end
   end
 
@@ -109,7 +107,7 @@ describe LogStash::Inputs::IMAP do
       input = LogStash::Inputs::IMAP.new config
       input.register
       event = input.parse_mail(subject)
-      insist { event.get("received") } == ["test1", "test2"]
+      expect( event.get("received") ).to eql ["test1", "test2"]
     end
 
     it "should add more than 2 values as array in event" do
@@ -123,7 +121,7 @@ describe LogStash::Inputs::IMAP do
       input = LogStash::Inputs::IMAP.new config
       input.register
       event = input.parse_mail(subject)
-      insist { event.get("received") } == ["test1", "test2", "test3"]
+      expect( event.get("received") ).to eql ["test1", "test2", "test3"]
     end
   end
 
@@ -136,7 +134,7 @@ describe LogStash::Inputs::IMAP do
       input = LogStash::Inputs::IMAP.new config
       input.register
       event = input.parse_mail(subject)
-      insist { event.get("message") } == msg_text
+      expect( event.get("message") ).to eql msg_text
     end
   end
 
@@ -148,7 +146,7 @@ describe LogStash::Inputs::IMAP do
       input = LogStash::Inputs::IMAP.new config
       input.register
       event = input.parse_mail(subject)
-      insist { event.get("attachments") } == [
+      expect( event.get("attachments") ).to eql [
         {"filename"=>"some.html"},
         {"filename"=>"image.png"},
         {"filename"=>"unencoded.data"}
@@ -163,7 +161,7 @@ describe LogStash::Inputs::IMAP do
       input = LogStash::Inputs::IMAP.new config
       input.register
       event = input.parse_mail(subject)
-      insist { event.get("attachments") } == [
+      expect( event.get("attachments") ).to eql [
         {"data"=> Base64.encode64(msg_html).encode(crlf_newline: true), "filename"=>"some.html"},
         {"data"=> Base64.encode64(msg_binary).encode(crlf_newline: true), "filename"=>"image.png"},
         {"data"=> msg_unencoded, "filename"=>"unencoded.data"}
