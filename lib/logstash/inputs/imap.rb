@@ -64,14 +64,16 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       # Ensure that the filepath exists before writing, since it's deeply nested.
       FileUtils::mkdir_p datapath
       @sincedb_path = File.join(datapath, ".sincedb_" + Digest::MD5.hexdigest("#{@user}_#{@host}_#{@port}_#{@folder}"))
+      @logger.debug? && @logger.debug("Generated sincedb path", sincedb_path: @sincedb_path)
     end
-    if File.directory?(@sincedb_path)
-      raise ArgumentError.new("The \"sincedb_path\" argument must point to a file, received a directory: \"#{@sincedb_path}\"")
-    end
-    @logger.info("Using \"sincedb_path\": \"#{@sincedb_path}\"")
+
     if File.exist?(@sincedb_path)
+      if File.directory?(@sincedb_path)
+        raise ArgumentError.new("The \"sincedb_path\" argument must point to a file, received a directory: \"#{@sincedb_path}\"")
+      end
+      @logger.debug? && @logger.debug("Found existing sincedb path", sincedb_path: @sincedb_path)
       @uid_last_value = File.read(@sincedb_path).to_i
-      @logger.info("Loading \"uid_last_value\": \"#{@uid_last_value}\"")
+      @logger.debug? && @logger.debug("Loaded from sincedb", uid_last_value: @uid_last_value)
     end
 
     @content_type_re = Regexp.new("^" + @content_type)
@@ -146,7 +148,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     # Always save @uid_last_value so when tracking is switched from
     # "NOT SEEN" to "UID" we will continue from first unprocessed message
     if @uid_last_value
-      @logger.info("Saving \"uid_last_value\": \"#{@uid_last_value}\"")
+      @logger.debug? && @logger.debug("Saving to sincedb", uid_last_value: @uid_last_value)
       File.write(@sincedb_path, @uid_last_value)
     end
   end
@@ -165,7 +167,8 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
   def parse_mail(mail)
     # Add a debug message so we can track what message might cause an error later
-    @logger.debug? && @logger.debug("Working with message_id", :message_id => mail.message_id)
+    @logger.debug? && @logger.debug("Processing mail", message_id: mail.message_id)
+
     # TODO(sissel): What should a multipart message look like as an event?
     # For now, just take the plain-text part and set it as the message.
     if mail.parts.count == 0
