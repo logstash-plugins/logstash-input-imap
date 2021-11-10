@@ -3,6 +3,7 @@ require "logstash/inputs/base"
 require "logstash/namespace"
 require "logstash/timestamp"
 require "stud/interval"
+require 'fileutils'
 
 # Read mails from IMAP server
 #
