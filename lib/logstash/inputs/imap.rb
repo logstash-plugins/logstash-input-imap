@@ -228,7 +228,6 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
   def stop
     Stud.stop!(@run_thread)
-    $stdin.close
   end
 
   private
