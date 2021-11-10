@@ -45,6 +45,10 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   config :strip_attachments, :validate => :boolean, :default => false
   config :save_attachments, :validate => :boolean, :default => false
 
+  # Legacy default: [attachments]
+  # ECS default: [@metadata][input][imap][attachments]
+  config :attachments_target, :validate => :field_reference
+
   # For multipart messages, use the first part that has this content-type as the event message.
   config :content_type, :validate => :string, :default => "text/plain"
 
@@ -57,11 +61,16 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   def initialize(*params)
     super
 
-    if ecs_compatibility != :disabled # set ECS target defaults
-      @headers_target = '[@metadata][input][imap][headers]' unless original_params.include?('headers_target')
-    end
-    unless @headers_target.nil?
+    if original_params.include?('headers_target')
       @headers_target = normalize_field_ref(@headers_target)
+    else
+      @headers_target = '[@metadata][input][imap][headers]' if ecs_compatibility != :disabled
+    end
+
+    if original_params.include?('attachments_target')
+      @attachments_target = normalize_field_ref(@attachments_target)
+    else
+      @attachments_target = ecs_compatibility != :disabled ? '[@metadata][input][imap][attachments]' : '[attachments]'
     end
   end
 
@@ -247,7 +256,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
       # Add attachments
       if attachments && attachments.length > 0
-        event.set('attachments', attachments)
+        event.set(@attachments_target, attachments)
       end
 
       decorate(event)

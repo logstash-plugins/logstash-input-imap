@@ -226,11 +226,12 @@ describe LogStash::Inputs::IMAP, :ecs_compatibility_support do
     context "attachments" do
       it "should extract filenames" do
         event = input.parse_mail(mail)
-        expect( event.get("attachments") ).to eql [
-                                                      {"filename"=>"some.html"},
-                                                      {"filename"=>"image.png"},
-                                                      {"filename"=>"unencoded.data"}
-                                                  ]
+        target = ecs_compatibility? ? '[@metadata][input][imap][attachments]' : 'attachments'
+        expect( event.get(target) ).to eql [
+                                                {"filename"=>"some.html"},
+                                                {"filename"=>"image.png"},
+                                                {"filename"=>"unencoded.data"}
+                                            ]
       end
     end
 
@@ -239,11 +240,12 @@ describe LogStash::Inputs::IMAP, :ecs_compatibility_support do
 
       it "should extract the encoded content" do
         event = input.parse_mail(mail)
-        expect( event.get("attachments") ).to eql [
-                                                      {"data"=> Base64.encode64(msg_html).encode(crlf_newline: true), "filename"=>"some.html"},
-                                                      {"data"=> Base64.encode64(msg_binary).encode(crlf_newline: true), "filename"=>"image.png"},
-                                                      {"data"=> msg_unencoded, "filename"=>"unencoded.data"}
-                                                  ]
+        target = ecs_compatibility? ? '[@metadata][input][imap][attachments]' : 'attachments'
+        expect( event.get(target) ).to eql [
+                                                {"data"=> Base64.encode64(msg_html).encode(crlf_newline: true), "filename"=>"some.html"},
+                                                {"data"=> Base64.encode64(msg_binary).encode(crlf_newline: true), "filename"=>"image.png"},
+                                                {"data"=> msg_unencoded, "filename"=>"unencoded.data"}
+                                            ]
       end
     end
 
