@@ -26,6 +26,7 @@ Read mails from IMAP server
 Periodically scan an IMAP folder (`INBOX` by default) and move any read messages
 to the trash.
 
+[id="plugins-{type}s-{plugin}-ecs"]
 ==== Compatibility with the Elastic Common Schema (ECS)
 
 The plugin includes sensible defaults that change based on <<plugins-{type}s-{plugin}-ecs_compatibility,ECS compatibility mode>>.
