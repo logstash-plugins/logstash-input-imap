@@ -177,7 +177,6 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   rescue => e
     @logger.error("Encountered error #{e.class}", :message => e.message, :backtrace => e.backtrace)
     # Do not raise error, check_mail will be invoked in the next run time
-
   ensure
     # Close the connection (and ignore errors)
     imap.close rescue nil
@@ -225,34 +224,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       # Use the 'Date' field as the timestamp
       event.timestamp = LogStash::Timestamp.new(mail.date.to_time)
 
-      # Add fields: Add message.header_fields { |h| h.name=> h.value }
-      mail.header_fields.each do |header|
-        # 'header.name' can sometimes be a Mail::Multibyte::Chars, get it in String form
-        name = header.name.to_s
-
-        # Assume we already processed the 'date' above.
-        next if name == "Date"
-
-        name = name.downcase if @lowercase_headers
-
-        # Call .decoded on the header in case it's in encoded-word form.
-        # Details at:
-        #   https://github.com/mikel/mail/blob/master/README.md#encodings
-        #   http://tools.ietf.org/html/rfc2047#section-2
-        value = transcode_to_utf8(header.decoded)
-
-        targeted_name = "#{@headers_target}[#{name}]"
-        case (field = event.get(targeted_name))
-        when String
-          # promote string to array if a header appears multiple times (like 'received')
-          event.set(targeted_name, [field, value])
-        when Array
-          field << value
-          event.set(targeted_name, field)
-        when nil
-          event.set(targeted_name, value)
-        end
-      end
+      process_headers(mail, event)
 
       # Add attachments
       if attachments && attachments.length > 0
@@ -261,6 +233,37 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
       decorate(event)
       event
+    end
+  end
+
+  def process_headers(mail, event)
+    # Add fields: Add message.header_fields { |h| h.name=> h.value }
+    mail.header_fields.each do |header|
+      # 'header.name' can sometimes be a Mail::Multibyte::Chars, get it in String form
+      name = header.name.to_s
+
+      # assume we already processed the 'date' into event.timestamp
+      next if name == "Date"
+
+      name = name.downcase if @lowercase_headers
+
+      # Call .decoded on the header in case it's in encoded-word form.
+      # Details at:
+      #   https://github.com/mikel/mail/blob/master/README.md#encodings
+      #   http://tools.ietf.org/html/rfc2047#section-2
+      value = transcode_to_utf8(header.decoded)
+
+      targeted_name = "#{@headers_target}[#{name}]"
+      case (field = event.get(targeted_name))
+      when String
+        # promote string to array if a header appears multiple times (like 'received')
+        event.set(targeted_name, [field, value])
+      when Array
+        field << value
+        event.set(targeted_name, field)
+      when nil
+        event.set(targeted_name, value)
+      end
     end
   end
 
