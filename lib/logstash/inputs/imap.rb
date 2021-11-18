@@ -238,7 +238,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         # Details at:
         #   https://github.com/mikel/mail/blob/master/README.md#encodings
         #   http://tools.ietf.org/html/rfc2047#section-2
-        value = transcode_to_utf8(header.decoded.to_s)
+        value = transcode_to_utf8(header.decoded)
 
         targeted_name = "#{@headers_target}[#{name}]"
         case (field = event.get(targeted_name))
@@ -273,8 +273,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   # the mail gem will set the correct encoding on header strings decoding
   # and we want to transcode it to utf8
   def transcode_to_utf8(s)
-    unless s.nil?
-      s.encode(Encoding::UTF_8, :invalid => :replace, :undef => :replace)
-    end
+    return nil if s.nil?
+    s.encode(Encoding::UTF_8, :invalid => :replace, :undef => :replace)
   end
 end
