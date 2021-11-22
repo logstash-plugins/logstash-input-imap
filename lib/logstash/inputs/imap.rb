@@ -69,7 +69,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     if original_params.include?('headers_target')
       @headers_target = normalize_field_ref(headers_target)
     else
-      @headers_target = '[@metadata][input][imap][headers]' if ecs_compatibility != :disabled
+      @headers_target = ecs_compatibility != :disabled ? '[@metadata][input][imap][headers]' : ''
     end
 
     if original_params.include?('attachments_target')
@@ -86,6 +86,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   end
 
   def normalize_field_ref(target)
+    return nil if target.nil? || target.empty?
     # so we can later event.set("#{target}[#{name}]", ...)
     target.match?(/\A[^\[\]]+\z/) ? "[#{target}]" : target
   end
@@ -237,10 +238,10 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
       set_target_fields(mail, event) if @target
 
-      process_headers(mail, event)
+      process_headers(mail, event) if @headers_target
 
       # Add attachments
-      if attachments && attachments.length > 0
+      if attachments && attachments.length > 0 && @attachments_target
         event.set(@attachments_target, attachments)
       end
 
