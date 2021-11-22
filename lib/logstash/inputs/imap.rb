@@ -58,19 +58,30 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   # Path to file with last run time metadata
   config :sincedb_path, :validate => :string, :required => false
 
+  # NOTE: when set an extra hash of email information is provided under the target field.
+  # The hash is based on ECS's email.* fields.
+  # Due compatibility these fields are only set when target is configured.
+  config :target, :validate => :field_reference # ECS default: [email], legacy default: nil
+
   def initialize(*params)
     super
 
     if original_params.include?('headers_target')
-      @headers_target = normalize_field_ref(@headers_target)
+      @headers_target = normalize_field_ref(headers_target)
     else
       @headers_target = '[@metadata][input][imap][headers]' if ecs_compatibility != :disabled
     end
 
     if original_params.include?('attachments_target')
-      @attachments_target = normalize_field_ref(@attachments_target)
+      @attachments_target = normalize_field_ref(attachments_target)
     else
       @attachments_target = ecs_compatibility != :disabled ? '[@metadata][input][imap][attachments]' : '[attachments]'
+    end
+
+    if original_params.include?('target')
+      @target = normalize_field_ref(target)
+    else
+      @target = '[email]' if ecs_compatibility != :disabled
     end
   end
 
@@ -222,7 +233,9 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
     @codec.decode(message) do |event|
       # Use the 'Date' field as the timestamp
-      event.timestamp = LogStash::Timestamp.new(mail.date.to_time)
+      event.timestamp = LogStash::Timestamp.new(mail.date.to_time) if mail.date
+
+      set_target_fields(mail, event) if @target
 
       process_headers(mail, event)
 
@@ -234,6 +247,18 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       decorate(event)
       event
     end
+  end
+
+  def set_target_fields(mail, event)
+    event.set("#{@target}[direction]", 'inbound') # we're reading mails from IMAP
+    event.set("#{@target}[subject]", mail.subject)
+    event.set("#{@target}[from]", mail.from) # String | Array<String>
+    event.set("#{@target}[to]", mail.to) if mail.to
+    event.set("#{@target}[cc]", mail.cc) if mail.cc
+    event.set("#{@target}[bcc]", mail.bcc) if mail.bcc
+    event.set("#{@target}[content_type]", mail.mime_type) if mail.mime_type
+    event.set("#{@target}[message_id]", mail.message_id) if mail.has_message_id?
+    event.set("#{@target}[reply_to]", mail.reply_to) if mail.reply_to
   end
 
   def process_headers(mail, event)

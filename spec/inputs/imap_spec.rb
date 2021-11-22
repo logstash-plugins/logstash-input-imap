@@ -85,6 +85,37 @@ describe LogStash::Inputs::IMAP, :ecs_compatibility_support do
 
     let (:config) { super().merge('ecs_compatibility' => ecs_select.active_mode) }
 
+    context "mail fields" do
+
+      before { @event = input.parse_mail(mail) }
+
+      it "sets email fields (in ECS mode)" do
+        expect( @event.get("[email][subject]") ).to eql 'logstash imap input test'
+        expect( @event.get("[email][from]") ).to eql ['me@example.com']
+        expect( @event.get("[email][to]") ).to eql ['you@example.com']
+        expect( @event.include?("[email][content_type]") ).to be true
+        expect( @event.include?("[email][cc]") ).to be false
+        expect( @event.include?("[email][bcc]") ).to be false
+        expect( @event.get("[email][message_id]") ).to eql '123@message.id'
+      end if ecs_select.active_mode != :disabled
+
+      it "does not set email field (in legacy mode)" do
+        expect( @event.include?("[email]") ).to be false
+      end if ecs_select.active_mode == :disabled
+
+      context 'with target' do
+
+        let (:config) { super().merge('target' => '[foo]') }
+
+        it "sets email fields" do
+          expect( @event.get("[foo][subject]") ).to eql 'logstash imap input test'
+          expect( @event.get("[foo][from]") ).to eql ['me@example.com']
+          expect( @event.get("[foo][message_id]") ).to eql '123@message.id'
+        end
+
+      end
+    end
+
     context "when no content-type selected" do
       it "should select text/plain part" do
         event = input.parse_mail(mail)
