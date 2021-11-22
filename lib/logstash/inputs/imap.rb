@@ -202,7 +202,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     end
   end
 
-  def parse_attachments(mail)
+  def legacy_parse_attachments(mail)
     attachments = []
     mail.attachments.each do |attachment|
       if @save_attachments
@@ -227,22 +227,19 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       # Multipart message; use the first text/plain part we find
       part = mail.parts.find { |p| p.content_type.match @content_type_re } || mail.parts.first
       message = part.decoded
-
-      # Parse attachments
-      attachments = parse_attachments(mail)
     end
 
     @codec.decode(message) do |event|
       # Use the 'Date' field as the timestamp
       event.timestamp = LogStash::Timestamp.new(mail.date.to_time) if mail.date
 
-      set_target_fields(mail, event) if @target
+      set_target_fields(event, mail) if @target
 
       process_headers(mail, event) if @headers_target
 
       # Add attachments
-      if attachments && attachments.length > 0 && @attachments_target
-        event.set(@attachments_target, attachments)
+      if @attachments_target && mail.has_attachments?
+        event.set(@attachments_target, legacy_parse_attachments(mail))
       end
 
       decorate(event)
@@ -250,16 +247,28 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     end
   end
 
-  def set_target_fields(mail, event)
+  def set_target_fields(event, mail)
     event.set("#{@target}[direction]", 'inbound') # we're reading mails from IMAP
     event.set("#{@target}[subject]", mail.subject)
-    event.set("#{@target}[from]", mail.from) # String | Array<String>
+    event.set("#{@target}[from]", mail.from) # Array<String>
     event.set("#{@target}[to]", mail.to) if mail.to
     event.set("#{@target}[cc]", mail.cc) if mail.cc
     event.set("#{@target}[bcc]", mail.bcc) if mail.bcc
     event.set("#{@target}[content_type]", mail.mime_type) if mail.mime_type
     event.set("#{@target}[message_id]", mail.message_id) if mail.has_message_id?
     event.set("#{@target}[reply_to]", mail.reply_to) if mail.reply_to
+    if mail.has_attachments?
+      attachments = mail.attachments.map do |attachment|
+        {
+            "file" => {
+                'name' => attachment.filename,
+                'mime_type' => attachment.mime_type,
+                'size' => attachment.body.to_s.size
+            }
+        }
+      end
+      event.set("#{@target}[attachments]", attachments)
+    end
   end
 
   def process_headers(mail, event)

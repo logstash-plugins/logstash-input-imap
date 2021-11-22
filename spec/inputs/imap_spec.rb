@@ -97,6 +97,10 @@ describe LogStash::Inputs::IMAP, :ecs_compatibility_support do
         expect( @event.include?("[email][cc]") ).to be false
         expect( @event.include?("[email][bcc]") ).to be false
         expect( @event.get("[email][message_id]") ).to eql '123@message.id'
+
+        attachments = @event.get("[email][attachments]")
+        expect( attachments ).to_not be_empty
+        expect( attachments ).to include "file" => { "name" => "image.png", "size" => msg_binary.size, "mime_type" => "image/png" }
       end if ecs_select.active_mode != :disabled
 
       it "does not set email field (in legacy mode)" do
