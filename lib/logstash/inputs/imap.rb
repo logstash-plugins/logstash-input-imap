@@ -104,12 +104,11 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       @sincedb_path = File.join(datapath, ".sincedb_" + Digest::MD5.hexdigest("#{@user}_#{@host}_#{@port}_#{@folder}"))
       @logger.debug? && @logger.debug("Generated sincedb path", sincedb_path: @sincedb_path)
     end
-
+    @logger.info("Using", sincedb_path: @sincedb_path)
     if File.exist?(@sincedb_path)
       if File.directory?(@sincedb_path)
         raise ArgumentError.new("The \"sincedb_path\" argument must point to a file, received a directory: \"#{@sincedb_path}\"")
       end
-      @logger.debug? && @logger.debug("Found existing sincedb path", sincedb_path: @sincedb_path)
       @uid_last_value = File.read(@sincedb_path).to_i
       @logger.debug? && @logger.debug("Loaded from sincedb", uid_last_value: @uid_last_value)
     end
