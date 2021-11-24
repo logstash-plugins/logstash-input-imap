@@ -149,7 +149,7 @@ The value of this setting affects the _default_ value of <<plugins-{type}s-{plug
   * Value type is <<string,string>>
   * Default value depends on whether <<plugins-{type}s-{plugin}-ecs_compatibility>> is enabled:
     ** ECS Compatibility disabled: no default value for this setting
-    ** ECS Compatibility enabled: `"[@metadata][input][imap][headers]"
+    ** ECS Compatibility enabled: `"[@metadata][input][imap][headers]"`
 
 The name of the field under which mail headers will be added.
 
