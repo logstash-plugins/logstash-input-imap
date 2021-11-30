@@ -62,18 +62,21 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     super
 
     if original_params.include?('headers_target')
-      @headers_target = normalize_field_ref(@headers_target)
+      @headers_target = normalize_field_ref(headers_target)
     else
+      # NOTE: user specified `headers_target => ''` means disable headers (@headers_target == nil)
+      # unlike our default here (@headers_target == '') causes setting headers at top level ...
       @headers_target = ecs_compatibility != :disabled ? '[@metadata][input][imap][headers]' : ''
     end
 
     if original_params.include?('attachments_target')
-      @attachments_target = normalize_field_ref(@attachments_target)
+      @attachments_target = normalize_field_ref(attachments_target)
     else
       @attachments_target = ecs_compatibility != :disabled ? '[@metadata][input][imap][attachments]' : '[attachments]'
     end
   end
 
+  # @note a '' target value is normalized to nil
   def normalize_field_ref(target)
     return nil if target.nil? || target.empty?
     # so we can later event.set("#{target}[#{name}]", ...)

@@ -170,6 +170,19 @@ describe LogStash::Inputs::IMAP, :ecs_compatibility_support do
       end
     end
 
+    context "headers_target => ''" do
+      let(:config) { super().merge("headers_target" => '') }
+
+      before { @event = input.parse_mail(mail) }
+
+      it "does not set any header fields" do
+        ['From', 'To', 'Subject', 'subject', 'Date', 'date'].each do |name|
+          expect( @event.include?(name) ).to be false # legacy
+          expect( @event.include?("[@metadata][input][imap][headers][#{name}]") ).to be false # ecs
+        end
+      end
+    end
+
     context "when subject is in RFC 2047 encoded-word format" do
       before do
         mail.subject = "=?iso-8859-1?Q?foo_:_bar?="
