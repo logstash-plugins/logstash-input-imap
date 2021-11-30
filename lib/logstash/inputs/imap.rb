@@ -244,10 +244,6 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     mail.header_fields.each do |header|
       # 'header.name' can sometimes be a Mail::Multibyte::Chars, get it in String form
       name = header.name.to_s
-
-      # assume we already processed the 'date' into event.timestamp
-      next if name == "Date"
-
       name = name.downcase if @lowercase_headers
 
       # Call .decoded on the header in case it's in encoded-word form.

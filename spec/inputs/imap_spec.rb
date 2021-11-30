@@ -130,8 +130,8 @@ describe LogStash::Inputs::IMAP, :ecs_compatibility_support do
         end
       end
 
-      it 'does not set date header' do
-        expect( @event.include?('date') ).to be false
+      it 'does include the date header' do
+        expect( @event.include?('date') ).to be true unless ecs_compatibility?
         expect( @event.include?('Date') ).to be false
       end
     end
@@ -165,8 +165,8 @@ describe LogStash::Inputs::IMAP, :ecs_compatibility_support do
         end
       end
 
-      it 'does not set date header' do
-        expect( @event.include?('Date') ).to be false
+      it 'does include the date header' do
+        expect( @event.include?('Date') ).to be true unless ecs_compatibility?
       end
     end
 
