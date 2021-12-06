@@ -3,13 +3,22 @@ require "logstash/inputs/base"
 require "logstash/namespace"
 require "logstash/timestamp"
 require "stud/interval"
-require "socket" # for Socket.gethostname
+require 'fileutils'
+
+require 'logstash/plugin_mixins/ecs_compatibility_support'
+require 'logstash/plugin_mixins/ecs_compatibility_support/target_check'
+require 'logstash/plugin_mixins/validator_support/field_reference_validation_adapter'
 
 # Read mails from IMAP server
 #
 # Periodically scan an IMAP folder (`INBOX` by default) and move any read messages
 # to the trash.
 class LogStash::Inputs::IMAP < LogStash::Inputs::Base
+
+  include LogStash::PluginMixins::ECSCompatibilitySupport(:disabled, :v1, :v8 => :v1)
+
+  extend LogStash::PluginMixins::ValidatorSupport::FieldReferenceValidationAdapter
+
   config_name "imap"
 
   default :codec, "plain"
@@ -24,15 +33,23 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
   config :folder, :validate => :string, :default => 'INBOX'
   config :fetch_count, :validate => :number, :default => 50
-  config :lowercase_headers, :validate => :boolean, :default => true
   config :check_interval, :validate => :number, :default => 300
+
+  config :lowercase_headers, :validate => :boolean, :default => true
+
+  config :headers_target, :validate => :field_reference # ECS default: [@metadata][input][imap][headers]
+
   config :delete, :validate => :boolean, :default => false
   config :expunge, :validate => :boolean, :default => false
+
   config :strip_attachments, :validate => :boolean, :default => false
   config :save_attachments, :validate => :boolean, :default => false
 
-  # For multipart messages, use the first part that has this
-  # content-type as the event message.
+  # Legacy default: [attachments]
+  # ECS default: [@metadata][input][imap][attachments]
+  config :attachments_target, :validate => :field_reference
+
+  # For multipart messages, use the first part that has this content-type as the event message.
   config :content_type, :validate => :string, :default => "text/plain"
 
   # Whether to use IMAP uid to track last processed message
@@ -40,6 +57,32 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
   # Path to file with last run time metadata
   config :sincedb_path, :validate => :string, :required => false
+
+  def initialize(*params)
+    super
+
+    if original_params.include?('headers_target')
+      @headers_target = normalize_field_ref(headers_target)
+    else
+      # NOTE: user specified `headers_target => ''` means disable headers (@headers_target == nil)
+      # unlike our default here (@headers_target == '') causes setting headers at top level ...
+      @headers_target = ecs_compatibility != :disabled ? '[@metadata][input][imap][headers]' : ''
+    end
+
+    if original_params.include?('attachments_target')
+      @attachments_target = normalize_field_ref(attachments_target)
+    else
+      @attachments_target = ecs_compatibility != :disabled ? '[@metadata][input][imap][attachments]' : '[attachments]'
+    end
+  end
+
+  # @note a '' target value is normalized to nil
+  def normalize_field_ref(target)
+    return nil if target.nil? || target.empty?
+    # so we can later event.set("#{target}[#{name}]", ...)
+    target.match?(/\A[^\[\]]+\z/) ? "[#{target}]" : target
+  end
+  private :normalize_field_ref
 
   def register
     require "net/imap" # in stdlib
@@ -63,14 +106,15 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       # Ensure that the filepath exists before writing, since it's deeply nested.
       FileUtils::mkdir_p datapath
       @sincedb_path = File.join(datapath, ".sincedb_" + Digest::MD5.hexdigest("#{@user}_#{@host}_#{@port}_#{@folder}"))
+      @logger.debug? && @logger.debug("Generated sincedb path", sincedb_path: @sincedb_path)
     end
-    if File.directory?(@sincedb_path)
-      raise ArgumentError.new("The \"sincedb_path\" argument must point to a file, received a directory: \"#{@sincedb_path}\"")
-    end
-    @logger.info("Using \"sincedb_path\": \"#{@sincedb_path}\"")
+    @logger.info("Using", sincedb_path: @sincedb_path)
     if File.exist?(@sincedb_path)
+      if File.directory?(@sincedb_path)
+        raise ArgumentError.new("The \"sincedb_path\" argument must point to a file, received a directory: \"#{@sincedb_path}\"")
+      end
       @uid_last_value = File.read(@sincedb_path).to_i
-      @logger.info("Loading \"uid_last_value\": \"#{@uid_last_value}\"")
+      @logger.debug? && @logger.debug("Loaded from sincedb", uid_last_value: @uid_last_value)
     end
 
     @content_type_re = Regexp.new("^" + @content_type)
@@ -136,7 +180,6 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   rescue => e
     @logger.error("Encountered error #{e.class}", :message => e.message, :backtrace => e.backtrace)
     # Do not raise error, check_mail will be invoked in the next run time
-
   ensure
     # Close the connection (and ignore errors)
     imap.close rescue nil
@@ -145,7 +188,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     # Always save @uid_last_value so when tracking is switched from
     # "NOT SEEN" to "UID" we will continue from first unprocessed message
     if @uid_last_value
-      @logger.info("Saving \"uid_last_value\": \"#{@uid_last_value}\"")
+      @logger.debug? && @logger.debug("Saving to sincedb", uid_last_value: @uid_last_value)
       File.write(@sincedb_path, @uid_last_value)
     end
   end
@@ -164,7 +207,8 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
   def parse_mail(mail)
     # Add a debug message so we can track what message might cause an error later
-    @logger.debug? && @logger.debug("Working with message_id", :message_id => mail.message_id)
+    @logger.debug? && @logger.debug("Processing mail", message_id: mail.message_id)
+
     # TODO(sissel): What should a multipart message look like as an event?
     # For now, just take the plain-text part and set it as the message.
     if mail.parts.count == 0
@@ -183,35 +227,11 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
       # Use the 'Date' field as the timestamp
       event.timestamp = LogStash::Timestamp.new(mail.date.to_time)
 
-      # Add fields: Add message.header_fields { |h| h.name=> h.value }
-      mail.header_fields.each do |header|
-        # 'header.name' can sometimes be a Mail::Multibyte::Chars, get it in String form
-        name = @lowercase_headers ? header.name.to_s.downcase : header.name.to_s
-        # Call .decoded on the header in case it's in encoded-word form.
-        # Details at:
-        #   https://github.com/mikel/mail/blob/master/README.md#encodings
-        #   http://tools.ietf.org/html/rfc2047#section-2
-        value = transcode_to_utf8(header.decoded.to_s)
-
-        # Assume we already processed the 'date' above.
-        next if name == "Date"
-
-        case (field = event.get(name))
-        when String
-          # promote string to array if a header appears multiple times
-          # (like 'received')
-          event.set(name, [field, value])
-        when Array
-          field << value
-          event.set(name, field)
-        when nil
-          event.set(name, value)
-        end
-      end
+      process_headers(mail, event) if @headers_target
 
       # Add attachments
-      if attachments && attachments.length > 0
-        event.set('attachments', attachments)
+      if attachments && attachments.length > 0 && @attachments_target
+        event.set(@attachments_target, attachments)
       end
 
       decorate(event)
@@ -219,9 +239,35 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     end
   end
 
+  def process_headers(mail, event)
+    # Add fields: Add message.header_fields { |h| h.name=> h.value }
+    mail.header_fields.each do |header|
+      # 'header.name' can sometimes be a Mail::Multibyte::Chars, get it in String form
+      name = header.name.to_s
+      name = name.downcase if @lowercase_headers
+
+      # Call .decoded on the header in case it's in encoded-word form.
+      # Details at:
+      #   https://github.com/mikel/mail/blob/master/README.md#encodings
+      #   http://tools.ietf.org/html/rfc2047#section-2
+      value = transcode_to_utf8(header.decoded)
+
+      targeted_name = "#{@headers_target}[#{name}]"
+      case (field = event.get(targeted_name))
+      when String
+        # promote string to array if a header appears multiple times (like 'received')
+        event.set(targeted_name, [field, value])
+      when Array
+        field << value
+        event.set(targeted_name, field)
+      when nil
+        event.set(targeted_name, value)
+      end
+    end
+  end
+
   def stop
     Stud.stop!(@run_thread)
-    $stdin.close
   end
 
   private
@@ -230,8 +276,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   # the mail gem will set the correct encoding on header strings decoding
   # and we want to transcode it to utf8
   def transcode_to_utf8(s)
-    unless s.nil?
-      s.encode(Encoding::UTF_8, :invalid => :replace, :undef => :replace)
-    end
+    return nil if s.nil?
+    s.encode(Encoding::UTF_8, :invalid => :replace, :undef => :replace)
   end
 end
