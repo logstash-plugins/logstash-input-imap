@@ -1,3 +1,9 @@
+## 3.2.0
+  - Feat: ECS compatibility [#55](https://github.com/logstash-plugins/logstash-input-imap/pull/55)
+    * added (optional) `headers_target` configuration option
+    * added (optional) `attachments_target` configuration option
+  - Fix: plugin should not close `$stdin`, while being stopped 
+
 ## 3.1.0
   - Adds an option to recursively search the message parts for attachment and inline attachment filenames. If the save_attachments option is set to true, the content of attachments is included in the `attachments.data` field. The attachment data can then be used by the Elasticsearch Ingest Attachment Processor Plugin.
   [#48](https://github.com/logstash-plugins/logstash-input-imap/pull/48)
