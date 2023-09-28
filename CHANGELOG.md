@@ -1,3 +1,6 @@
+## 3.2.1
+  - Upgrade `email` dependency so that supports Ruby 3.1. This also fixes the `net-smtp` load regression [#60](https://github.com/logstash-plugins/logstash-input-imap/pull/60)
+
 ## 3.2.0
   - Feat: ECS compatibility [#55](https://github.com/logstash-plugins/logstash-input-imap/pull/55)
     * added (optional) `headers_target` configuration option
