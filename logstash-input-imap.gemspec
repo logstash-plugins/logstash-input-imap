@@ -21,11 +21,12 @@ Gem::Specification.new do |s|
 
   # Gem dependencies
   s.add_runtime_dependency "logstash-core-plugin-api", ">= 1.60", "<= 2.99"
+  s.add_runtime_dependency "logstash-core", ">= 8.10.0" # compatible with Ruby 3.1+
   s.add_runtime_dependency 'logstash-mixin-ecs_compatibility_support', '~> 1.3'
   s.add_runtime_dependency 'logstash-mixin-validator_support', '~> 1.0'
   s.add_runtime_dependency 'logstash-codec-plain'
   s.add_runtime_dependency 'mail', '~> 2.8'
-  s.add_runtime_dependency 'mime-types', '< 3'
+  s.add_runtime_dependency 'mime-types', '>= 3' # < 3 uses numbered parameter which is deprecated
   s.add_runtime_dependency 'stud', '~> 0.0.22'
 
   s.add_development_dependency 'logstash-devutils'
