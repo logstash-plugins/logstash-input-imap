@@ -1,5 +1,9 @@
+
 ## 3.3.0
   - Add mark_read option and fix #45 [#46](https://github.com/logstash-plugins/logstash-input-imap/pull/46)
+
+## 3.2.1
+  - Upgrade `email` dependency so that supports Ruby 3.1. This also fixes the `net-smtp` load regression [#60](https://github.com/logstash-plugins/logstash-input-imap/pull/60)
 
 ## 3.2.0
   - Feat: ECS compatibility [#55](https://github.com/logstash-plugins/logstash-input-imap/pull/55)
