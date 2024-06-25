@@ -1,3 +1,6 @@
+## 3.3.0
+  - Add mark_read option and fix #45 [#46](https://github.com/logstash-plugins/logstash-input-imap/pull/46)
+
 ## 3.2.0
   - Feat: ECS compatibility [#55](https://github.com/logstash-plugins/logstash-input-imap/pull/55)
     * added (optional) `headers_target` configuration option
