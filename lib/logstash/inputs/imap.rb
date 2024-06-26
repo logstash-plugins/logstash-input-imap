@@ -43,6 +43,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
   config :expunge, :validate => :boolean, :default => false
 
   config :strip_attachments, :validate => :boolean, :default => false
+  config :mark_read, :validate => :boolean, :default => true
   config :save_attachments, :validate => :boolean, :default => false
 
   # Legacy default: [attachments]
@@ -142,17 +143,28 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     # EOFError, OpenSSL::SSL::SSLError
     imap = connect
     imap.select(@folder)
-    if @uid_tracking && @uid_last_value
-      # If there are no new messages, uid_search returns @uid_last_value
-      # because it is the last message, so we need to delete it.
-      ids = imap.uid_search(["UID", (@uid_last_value+1..-1)]).delete_if { |uid|
-        uid <= @uid_last_value
-      }
+
+    @logger.debug? && @logger.debug("Checking IMAP folder #{@user}@#{@host}:#{@port}/#{@folder}")
+
+    if @uid_tracking
+      if @uid_last_value
+        # If there are no new messages, uid_search returns @uid_last_value
+        # because it is the last message, so we need to delete it.
+        ids = imap.uid_search(["UID", (@uid_last_value+1..-1)]).delete_if { |uid|
+          uid <= @uid_last_value
+        }
+      else
+        @logger.debug? && @logger.debug("#{@user}@#{@host}:#{@port}/#{@folder}: No uid_last_value, fetching ALL..")
+        ids = imap.uid_search("ALL")
+      end
     else
       ids = imap.uid_search("NOT SEEN")
     end
 
+    @logger.debug? && @logger.debug("#{@user}@#{@host}:#{@port}/#{@folder}: Found #{ids.count} new IDs: #{ids}")
+
     ids.each_slice(@fetch_count) do |id_set|
+      @logger.debug? && @logger.debug("#{@user}@#{@host}:#{@port}/#{@folder}: Fetching #{id_set}")
       items = imap.uid_fetch(id_set, ["BODY.PEEK[]", "UID"])
       items.each do |item|
         next unless item.attr.has_key?("BODY[]")
@@ -164,8 +176,10 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
         end
         # Mark message as processed
         @uid_last_value = item.attr["UID"]
-        imap.uid_store(@uid_last_value, '+FLAGS', @delete || @expunge ? :Deleted : :Seen)
-
+        if (@uid_tracking && @mark_read) || @delete || @expunge
+          @logger.debug? && @logger.debug("#{@user}@#{@host}:#{@port}/#{@folder}: Marking #{item.attr["UID"]} as read: #{mark_read}, delete: #{@delete}, expunge: #{@expunge}")
+          imap.uid_store(@uid_last_value, '+FLAGS', @delete || @expunge ? :Deleted : :Seen)
+        end
         # Stop message processing if it is requested
         break if stop?
       end
@@ -178,7 +192,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     end
 
   rescue => e
-    @logger.error("Encountered error #{e.class}", :message => e.message, :backtrace => e.backtrace)
+    @logger.error("#{@user}@#{@host}:#{@port}/#{@folder}: Encountered error #{e.class}", :message => e.message, :backtrace => e.backtrace)
     # Do not raise error, check_mail will be invoked in the next run time
   ensure
     # Close the connection (and ignore errors)
@@ -188,7 +202,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     # Always save @uid_last_value so when tracking is switched from
     # "NOT SEEN" to "UID" we will continue from first unprocessed message
     if @uid_last_value
-      @logger.debug? && @logger.debug("Saving to sincedb", uid_last_value: @uid_last_value)
+      @logger.info("#{@user}@#{@host}:#{@port}/#{@folder}: Saving \"uid_last_value\": \"#{@uid_last_value}\"")
       File.write(@sincedb_path, @uid_last_value)
     end
   end
@@ -207,8 +221,8 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
   def parse_mail(mail)
     # Add a debug message so we can track what message might cause an error later
+    @logger.debug? && @logger.debug("#{@user}@#{@host}:#{@port}/#{@folder}: Working with message_id", :message_id => mail.message_id)
     @logger.debug? && @logger.debug("Processing mail", message_id: mail.message_id)
-
     # TODO(sissel): What should a multipart message look like as an event?
     # For now, just take the plain-text part and set it as the message.
     if mail.parts.count == 0
