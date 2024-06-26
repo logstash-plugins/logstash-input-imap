@@ -103,7 +103,7 @@ For multipart messages, use the first part that has this content-type as the eve
   * Value type is <<boolean,boolean>>
   * Default value is `false`
 
-Flag processed messages as deleted, the message will still be available on the server.
+Flag processed messages as deleted. The message will still be available on the server.
 
 [id="plugins-{type}s-{plugin}-ecs_compatibility"]
 ===== `ecs_compatibility`
