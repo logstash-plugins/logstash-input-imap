@@ -126,7 +126,7 @@ The value of this setting affects the _default_ value of <<plugins-{type}s-{plug
   * Value type is <<boolean,boolean>>
   * Default value is `false`
 
-Expunge messages in the IMAP folder. This will permanently delete messages from the IMAP server.
+Expunge messages in the IMAP folder. When set to `true`, messages will be permanently deleted from the IMAP server.
 
 [id="plugins-{type}s-{plugin}-fetch_count"]
 ===== `fetch_count`
