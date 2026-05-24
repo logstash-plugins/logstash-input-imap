@@ -217,6 +217,12 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     else
       # Multipart message; use the first text/plain part we find
       part = mail.parts.find { |p| p.content_type.match @content_type_re } || mail.parts.first
+      if part.content_type.start_with?('multipart/related')
+        part = part.parts.find { |p| p.content_type.match @content_type_re } || part.parts.first
+      end
+      if part.content_type.start_with?('multipart/alternative')
+        part = part.text_part
+      end
       message = part.decoded
 
       # Parse attachments
