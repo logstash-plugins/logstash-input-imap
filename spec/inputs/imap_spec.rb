@@ -170,6 +170,18 @@ describe LogStash::Inputs::IMAP, :ecs_compatibility_support do
       end
     end
 
+    context "missing date" do
+      before do
+        mail.date = nil
+      end
+
+      it "should not cause an exception" do
+        event = input.parse_mail(mail)
+        expect( event.include?('Date') ).to be false
+        expect( event.timestamp ).not_to be nil
+      end
+    end
+
     context "headers_target => ''" do
       let(:config) { super().merge("headers_target" => '') }
 

@@ -225,7 +225,7 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
 
     @codec.decode(message) do |event|
       # Use the 'Date' field as the timestamp
-      event.timestamp = LogStash::Timestamp.new(mail.date.to_time)
+      event.timestamp = LogStash::Timestamp.new(mail.date&.to_time)
 
       process_headers(mail, event) if @headers_target
 
