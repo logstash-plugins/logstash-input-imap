@@ -260,6 +260,33 @@ describe LogStash::Inputs::IMAP, :ecs_compatibility_support do
                                                 {"data"=> msg_unencoded, "filename"=>"unencoded.data"}
                                             ]
       end
+
+      context "with a quoted-printable attachment" do
+        let(:msg_qp) { "café résumé naïve" }
+
+        # round-trip through raw source, same as `check_mail` does via `Mail.read_from_string`,
+        # so the attachment's `content_transfer_encoding` reflects what a real server would send
+        let(:mail) do
+          qp_content = msg_qp
+          raw_mail = Mail.new do
+            from     "me@example.com"
+            to       "you@example.com"
+            subject  "logstash imap input test"
+            date     msg_time
+            body     msg_text
+            add_file :filename => "note.txt", :content => qp_content, :content_transfer_encoding => "quoted-printable"
+          end
+          Mail.read_from_string(raw_mail.encoded)
+        end
+
+        it "should extract the quoted-printable-decoded content re-encoded as quoted-printable" do
+          event = input.parse_mail(mail)
+          target = ecs_compatibility? ? '[@metadata][input][imap][attachments]' : 'attachments'
+          expect( event.get(target) ).to eql [
+                                                  {"data"=> Mail::Encodings::QuotedPrintable.encode(msg_qp), "filename"=>"note.txt"}
+                                              ]
+        end
+      end
     end
 
   end

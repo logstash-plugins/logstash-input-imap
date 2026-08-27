@@ -24,7 +24,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'logstash-mixin-ecs_compatibility_support', '~> 1.3'
   s.add_runtime_dependency 'logstash-mixin-validator_support', '~> 1.0'
   s.add_runtime_dependency 'logstash-codec-plain'
-  s.add_runtime_dependency 'mail', '~> 2.8'
+  s.add_runtime_dependency 'mail', '~> 2.9'
   s.add_runtime_dependency 'stud', '~> 0.0.22'
 
   s.add_development_dependency 'logstash-devutils'

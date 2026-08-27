@@ -197,12 +197,28 @@ class LogStash::Inputs::IMAP < LogStash::Inputs::Base
     attachments = []
     mail.attachments.each do |attachment|
       if @save_attachments
-        attachments << { "filename" => attachment.filename, "data" => attachment.body.encoded }
+        attachments << { "filename" => attachment.filename, "data" => encode_attachment_data(attachment) }
       else
         attachments << { "filename" => attachment.filename}
       end
     end
     return attachments
+  end
+
+  # Re-applies the attachment's transfer encoding ourselves (via Mail::Encodings,
+  # the same encoders `mail` uses internally) instead of relying on Mail::Body#encoded,
+  # whose return value (encoded vs. already-decoded) has varied across `mail` gem versions.
+  # Note: 'binary' is the in-memory default the `mail` gem assigns to non-text
+  # attachments before they've been serialized/re-parsed, so it's treated like 'base64'.
+  def encode_attachment_data(attachment)
+    case attachment.content_transfer_encoding.to_s.downcase
+    when 'base64', 'binary'
+      Mail::Encodings::Base64.encode(attachment.body.decoded)
+    when 'quoted-printable'
+      Mail::Encodings::QuotedPrintable.encode(attachment.body.decoded)
+    else
+      attachment.body.decoded
+    end
   end
 
   def parse_mail(mail)
